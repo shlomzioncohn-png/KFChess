@@ -4,7 +4,7 @@ public class Position {
     private final int row;
     private final int col;
 
-    public (int row, int col) {
+    public Position(int row, int col) {
         this.row = row;
         this.col = col;
     }
@@ -17,7 +17,7 @@ public class Position {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Position position = (Position) o;
-        return thisPosition.row == position.row && this.col == position.col;
+        return this.row == position.row && this.col == position.col;
     }
 
     @Override
