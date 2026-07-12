@@ -10,7 +10,6 @@ public class RookRule implements PieceRule {
         int deltaRow = Math.abs(to.getRow() - from.getRow());
         int deltaCol = Math.abs(to.getCol() - from.getCol());
 
-        // תנועה ישרה בלבד
         boolean isStraight = (deltaRow == 0 && deltaCol > 0) || (deltaCol == 0 && deltaRow > 0);
         if (!isStraight) return false;
 
