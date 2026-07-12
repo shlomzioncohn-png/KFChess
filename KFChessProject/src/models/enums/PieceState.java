@@ -1,5 +1,5 @@
 package models.enums;
 
 public enum PieceState {
-    IDLE, MOVING, CAPTURED
+    IDLE, MOVING, CAPTURED,AIRBORNE
 }

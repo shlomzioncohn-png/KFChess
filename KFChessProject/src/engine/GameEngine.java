@@ -1,7 +1,9 @@
 package engine;
 
 import models.Board;
+import models.Piece;
 import models.Position;
+import models.enums.PieceState;
 import realtime.Motion;
 import realtime.RealTimeArbiter;
 
@@ -32,11 +34,23 @@ public class GameEngine {
     public void update(long currentClock) {
         activeMotions.removeIf(motion -> {
             if (currentClock >= motion.getArrivalTime()) {
-                board.movePiece(motion.getSource(), motion.getDestination());
+                Position dest = motion.getDestination();
+                Position src = motion.getSource();
+
+                Piece target = board.getPieceAt(dest);
+                if (target != null && target.getState() == PieceState.AIRBORNE) {
+                    board.removePiece(src);
+                }
+                else {
+                    Piece pieceToMove = board.getPieceAt(src);
+                    if (pieceToMove != null && pieceToMove.getState() != PieceState.AIRBORNE) {
+                        board.movePiece(src, dest);
+                        pieceToMove.setState(PieceState.IDLE);
+                    }
+                }
                 return true;
             }
             return false;
-        });
-    }
+        });}
 
 }
