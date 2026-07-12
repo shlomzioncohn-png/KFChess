@@ -8,6 +8,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class BoardParserTest {
 
+    /**
+     * מוודא שה-Parser יודע לקרוא טקסט, לחלץ ממנו את גובה ורוחב הלוח הנכונים,
+     * ולמקם את הכלים בדיוק במשבצות הנכונה.
+     */
     @Test
     public void testParseValidBoardString() {
         String rawBoard = "wP . . bK\n" +
@@ -30,6 +34,9 @@ public class BoardParserTest {
         assertNull(board.getPieceAt(new Position(0, 1)), "משבצת עם נקודה צריכה להישאר ריקה");
     }
 
+    /**
+     * בודק מקרי קצה של קלט פגום (טקסט ריק או null) ומוודא שהמערכת חוסמת אותם וזורקת שגיאה
+     */
     @Test
     public void testParseEmptyOrNullThrowsException() {
         assertThrows(IllegalArgumentException.class, () -> {
