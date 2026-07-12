@@ -89,5 +89,22 @@ import static org.junit.jupiter.api.Assertions.*;
 
             assertNull(board.getPieceAt(pos), "אחרי הסרת הכלי, המשבצת חייבת לחזור להיות null");
         }
+
+        /**
+         *              בודק שאי אפשר להזיז כלי אל מחוץ לגבולות המטריצה
+         */
+        @Test
+        public void testMovePieceOutOfBoundsThrowsException() {
+            Board board = new MatrixBoard(8, 8);
+            Position startPos = new Position(0, 0);
+            Position invalidDest = new Position(8, 8); // מחוץ ללוח
+
+            Piece pawn = new Piece("p1", PieceColor.WHITE, PieceType.PAWN, startPos);
+            board.addPiece(startPos, pawn);
+
+            assertThrows(IllegalArgumentException.class, () -> {
+                board.movePiece(startPos, invalidDest);
+            }, "הלוח חייב לחסום תנועה אל מחוץ לגבולות הלוח");
+        }
     }
 

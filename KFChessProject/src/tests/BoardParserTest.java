@@ -47,4 +47,32 @@ public class BoardParserTest {
             BoardParser.parse(null);
         }, "טקסט null חייב לזרוק שגיאה");
     }
+
+
+    /**
+     *         // בודק מה קורה אם שורה אחת ארוכה ושורה שנייה קצרה
+     */
+    @Test
+    public void testParseAsymmetricBoardThrowsException() {
+        String asymmetricBoard = "wP . . bK\n" +
+                ". .";
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            BoardParser.parse(asymmetricBoard);
+        }, "ה-Parser חייב לזהות לוח לא סימטרי ולזרוק שגיאה");
+    }
+
+    /**
+     *
+     *      בודק מה קורה אם יש מילה מוזרה שלא תואמת לשום כלי
+     */
+    @Test
+    public void testParseInvalidPieceTokenThrowsException() {
+        String invalidPieceBoard = "wP . . bK\n" +
+                ". hello . .";
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            BoardParser.parse(invalidPieceBoard);
+        }, "ה-Parser חייב לזהות טקסט של כלי לא חוקי ולזרוק שגיאה");
+    }
 }
