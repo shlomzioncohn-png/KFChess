@@ -3,6 +3,9 @@ package rules;
 import models.Board;
 import models.Position;
 
+/**
+ *   צריח-הכלי שנמצא בפינות הלוח וזז רק בקווים ישרים – אופקית ואנכית
+ */
 public class RookRule implements PieceRule {
 
     @Override
