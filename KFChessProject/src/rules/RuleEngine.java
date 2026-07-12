@@ -3,27 +3,10 @@ package rules;
 import models.Board;
 import models.Piece;
 import models.Position;
-import models.enums.PieceType;
 
-import java.util.HashMap;
-import java.util.Map;
 
 public class RuleEngine {
 
-    private static final Map<PieceType, PieceRule> rules = new HashMap<>();
-
-    static {
-        rules.put(PieceType.KING, new KingRule());
-        rules.put(PieceType.ROOK, new RookRule());
-        rules.put(PieceType.BISHOP, new BishopRule());
-        rules.put(PieceType.QUEEN, new QueenRule());
-        rules.put(PieceType.KNIGHT, new KnightRule());
-        rules.put(PieceType.PAWN, new PawnRule());
-    }
-
-    /**
-     * הפונקציה המרכזית והיחידה שמנוע המשחק או הקונטרולר קוראים לה כדי לאמת מהלך.
-     */
     public static boolean validateMove(Board board, Position from, Position to) {
         if (board == null || from == null || to == null) return false;
         if (!board.isValidPosition(from) || !board.isValidPosition(to)) return false;
@@ -37,8 +20,10 @@ public class RuleEngine {
         if (targetPiece != null && targetPiece.getColor() == movingPiece.getColor()) {
             return false;
         }
-        PieceRule rule = rules.get(movingPiece.getType());
+
+        PieceRule rule = PieceRuleRegistry.getRule(movingPiece.getType());
         if (rule == null) return false;
+
         return rule.isValidMove(board, from, to);
     }
 }
