@@ -16,6 +16,8 @@ public class GameSnapshot {
         this.gameState = gameState;
     }
 
+    
+
 
     public Board getBoard() {
         return board;
