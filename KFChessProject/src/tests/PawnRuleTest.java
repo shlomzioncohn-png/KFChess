@@ -40,4 +40,21 @@ public class PawnRuleTest {
 
         assertFalse(RuleEngine.validateMove(board, new Position(3, 2), new Position(1, 2)));
     }
+
+    @Test
+    public void testPawnIllegalMovements() {
+        String boardStr =
+                ". . . .\n" +
+                        ". . . .\n" +
+                        ". . wP .\n" +
+                        ". . . .\n" +
+                        ". . . .";
+        Board board = BoardParser.parse(boardStr);
+        Position pawnPos = new Position(2, 2);
+
+        // 1. ניסיון של רגלי לזוז אחורה
+        assertFalse(RuleEngine.validateMove(board, pawnPos, new Position(3, 2)));
+
+        assertFalse(RuleEngine.validateMove(board, pawnPos, new Position(0, 2)));
+    }
 }
