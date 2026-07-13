@@ -52,6 +52,7 @@ public class GameEngine {
             piece.setState(PieceState.AIRBORNE);
 
             Motion motion = new Motion(
+                    piece,
                     src,
                     dest,
                     currentClock + result.getTravelTime()
@@ -82,35 +83,38 @@ public class GameEngine {
 
 
     private boolean resolveMotion(Motion motion, long currentClock) {
-        if (currentClock < motion.getArrivalTime()) {
-            return false;
-        }
+        if (currentClock < motion.getArrivalTime()) return false;
 
         Position src = motion.getSource();
         Position dest = motion.getDestination();
-        Piece movingPiece = board.getPieceAt(src);
+        Piece movingPiece = motion.getPiece();
 
-        if (movingPiece == null) {
+
+        if (movingPiece == null || board.getPieceAt(src) != movingPiece) {
             return true;
         }
-        Piece target = board.getPieceAt(dest);
 
-        if (target != null
-                && target.getColor() != movingPiece.getColor()
-                && target.isProtectedByJump(currentClock)) {
-            // תפיסה באוויר: התוקף מתאדה, המגן נשאר במקומו
+        Piece target = board.getPieceAt(dest);
+        if (target != null && target.getColor() != movingPiece.getColor() && target.isProtectedByJump(currentClock)) {
             board.removePiece(src);
             movingPiece.setState(PieceState.CAPTURED);
             return true;
         }
 
-        if (target != null && target.getColor() != movingPiece.getColor()) {
+        if (target != null && target.getColor() == movingPiece.getColor()) {
+            movingPiece.setState(PieceState.IDLE);
+            return true; // ביטול ההעברה כי זה לא חוקי
+        }
+
+        // 3. תפיסה רגילה: הסרת היעד והעברת הכלי
+        if (target != null) {
             if (WinCondition.isDecisive(target)) {
                 gameState.setGameOver(true);
                 gameState.setWinner(movingPiece.getColor());
             }
             board.removePiece(dest);
         }
+
         board.movePiece(src, dest);
         movingPiece.setState(PieceState.IDLE);
 
@@ -120,6 +124,4 @@ public class GameEngine {
 
         return true;
     }
-
-
 }

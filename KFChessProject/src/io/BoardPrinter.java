@@ -4,11 +4,12 @@ import models.Board;
 import models.GameSnapshot;
 import models.Piece;
 import models.Position;
+import models.enums.PieceType;
 
 public class BoardPrinter {
 
     /**
-     * מקבל תמונת מצב של המשחק ומחזיר מחרוזת טקסט שמייצגת את הלוח ומצב המשחק.
+     * מקבל תמונת מצב של המשחק ומחזיר מחרוזת טקסט שמייצגת את הלוח.
      */
     public static String print(GameSnapshot snapshot) {
         if (snapshot == null) return "";
@@ -25,7 +26,18 @@ public class BoardPrinter {
                     sb.append(".");
                 } else {
                     String colorChar = piece.getColor().name().substring(0, 1).toLowerCase();
-                    String kindChar = piece.getType().name().substring(0, 1).toUpperCase();
+
+                    // תיקון הלוגיקה: שימוש ב-switch במקום substring כדי למנוע בלבול בין Knight ל-King
+                    String kindChar;
+                    PieceType type = piece.getType();
+                    if (type == PieceType.KING)   kindChar = "K";
+                    else if (type == PieceType.QUEEN)  kindChar = "Q";
+                    else if (type == PieceType.ROOK)   kindChar = "R";
+                    else if (type == PieceType.BISHOP) kindChar = "B";
+                    else if (type == PieceType.KNIGHT) kindChar = "N";
+                    else if (type == PieceType.PAWN)   kindChar = "P";
+                    else kindChar = "?";
+
                     sb.append(colorChar).append(kindChar);
                 }
 
@@ -33,13 +45,9 @@ public class BoardPrinter {
                     sb.append(" ");
                 }
             }
-            sb.append("\n");
-        }
-
-        if (snapshot.getGameState().isGameOver()) {
-            sb.append("Game Over! Winner: ").append(snapshot.getGameState().getWinner());
-        } else {
-            sb.append("Game is active");
+            if (row < board.getHeight() - 1) {
+                sb.append("\n");
+            }
         }
 
         return sb.toString();

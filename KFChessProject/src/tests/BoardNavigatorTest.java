@@ -1,3 +1,4 @@
+package tests;
 import models.Board;
 import models.MatrixBoard;
 import models.Piece;

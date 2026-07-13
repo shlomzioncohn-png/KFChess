@@ -6,8 +6,7 @@ import models.Position;
 import models.enums.PieceColor;
 
 /**
- *  החוקים של הרגלי דורשים לדעת את צבע הכלי (כי לבן עולה למעלה ושחור יורד למטה) ואת שורת ההתחלה שלו.
- *  משתמשים במתודות של ה-Board וה-Piece כדי שהכל יחושב דינמית ללא ערכים קשיחים.
+ *  החוקים של הרגלי דורשים לדעת את צבע הכלי ואת שורת ההתחלה שלו.
  */
 public class PawnRule implements PieceRule {
 
@@ -19,12 +18,12 @@ public class PawnRule implements PieceRule {
         int rowDiff = to.getRow() - from.getRow();
         int deltaCol = Math.abs(to.getCol() - from.getCol());
 
-        // קביעת כיוון התנועה המותר
         int allowedSingleRowDiff = (pawn.getColor() == PieceColor.WHITE) ? -1 : 1;
         int allowedDoubleRowDiff = (pawn.getColor() == PieceColor.WHITE) ? -2 : 2;
 
-        int startRow = (pawn.getColor() == PieceColor.WHITE) ? board.getHeight() - 1 : 0;
-        // מקרה א': תנועה ישרה קדימה (אין החלפת עמודה)
+        int startRow = (pawn.getColor() == PieceColor.WHITE) ? board.getHeight() - 2 : 1;
+
+        // מקרה א': תנועה ישרה קדימה
         if (deltaCol == 0) {
             if (rowDiff == allowedSingleRowDiff) {
                 return board.getPieceAt(to) == null;
@@ -34,10 +33,11 @@ public class PawnRule implements PieceRule {
             }
             return false;
         }
-        // מקרה ב': תנועה באלכסון
+
+        // מקרה ב': תנועה באלכסון (לכידה)
         if (deltaCol == 1 && rowDiff == allowedSingleRowDiff) {
             Piece target = board.getPieceAt(to);
-            return target != null;
+            return target != null; // לכידה חוקית רק אם יש שם כלי
         }
         return false;
     }

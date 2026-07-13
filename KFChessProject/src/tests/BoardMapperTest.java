@@ -1,10 +1,13 @@
+package tests;
+
 import input.BoardMapper;
 import models.Board;
 import models.MatrixBoard;
 import models.Position;
-import org.junit.jupiter.api.Test;
-
+import org.junit.Test;
 import static org.junit.jupiter.api.Assertions.*;
+
+
 
 public class BoardMapperTest {
 
