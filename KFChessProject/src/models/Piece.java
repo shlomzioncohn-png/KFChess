@@ -11,10 +11,13 @@ import models.enums.PieceType;
 public class Piece {
     private final String id;
     private final PieceColor color;
-    private final PieceType type;
+    private PieceType type;
 
     private Position cell;
     private PieceState state;
+
+    private long jumpExpiryTime; // 0 = אין הגנת קפיצה פעילה
+
 
 
     public Piece(String id, PieceColor color, PieceType type, Position initialCell) {
@@ -23,6 +26,8 @@ public class Piece {
         this.type = type;
         this.cell = initialCell;
         this.state = PieceState.IDLE;
+        this.jumpExpiryTime = 0;
+
     }
 
 
@@ -53,6 +58,25 @@ public class Piece {
     public void setState(PieceState state) {
         this.state = state;
     }
+
+    public void promote(PieceType newType) {
+        this.type = newType;
+    }
+
+    public void setJumpExpiryTime(long jumpExpiryTime) {
+        this.jumpExpiryTime = jumpExpiryTime;
+    }
+
+    /**
+     * האם הכלי הזה, עכשיו, מוגן על ידי קפיצה פעילה.
+     * הכלי הוא היחיד שיודע לענות על השאלה הזו על עצמו.
+     */
+    public boolean isProtectedByJump(long currentClock) {
+        return state == PieceState.JUMPING && currentClock < jumpExpiryTime;
+    }
+
+
+
 
     // לצרכי דיבאג והדפסה
     @Override

@@ -45,7 +45,7 @@ public class Controller {
         Position pos = BoardMapper.mapPixelToPosition(x, y, board);
         if (pos != null && board.getPieceAt(pos) != null) {
             System.out.println("Triggering Jump at: " + pos);
-            // engine.triggerJump(pos, currentClock);
+            engine.triggerJump(pos, currentClock);   // <-- זה השינוי - היה מוער בהערה
         }
     }
 
