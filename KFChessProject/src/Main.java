@@ -1,105 +1,59 @@
+
 import engine.GameEngine;
-import input.Controller;
 import io.BoardParser;
 import io.BoardPrinter;
 import models.Board;
-import models.GameSnapshot;
 import models.GameState;
 import realtime.RealTimeArbiter;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
+import input.Controller;
+import models.GameSnapshot;
+import java.util.Scanner;
 
 public class Main {
+    public static void main(String[] args) {
+        // 1. אתחול ראשוני - הלוח נטען מטקסט (שימוש ב-BoardParser!)
+        String initialBoardLayout =
+                "bR bN bB bQ bK bB bN bR\n" +
+                        "bP bP bP bP bP bP bP bP\n" +
+                        ".  .  .  .  .  .  .  .\n" +
+                        ".  .  .  .  .  .  .  .\n" +
+                        ".  .  .  .  .  .  .  .\n" +
+                        ".  .  .  .  .  .  .  .\n" +
+                        "wP wP wP wP wP wP wP wP\n" +
+                        "wR wN wB wQ wK wB wN wR";
 
-    public static void main(String[] args) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-
-        List<String> boardLines = readBoardSection(reader);
-        if (boardLines.isEmpty()) {
-            return;
-        }
-
-        Board board;
-        try {
-            board = BoardParser.parse(String.join("\n", boardLines));
-        } catch (IllegalArgumentException e) {
-            System.out.println("ERROR " + e.getMessage());
-            return;
-        }
-
+        Board board = BoardParser.parse(initialBoardLayout);
         GameState gameState = new GameState();
         RealTimeArbiter arbiter = new RealTimeArbiter();
         GameEngine engine = new GameEngine(board, arbiter, gameState);
         Controller controller = new Controller(engine, board);
 
-        long clock = 0L;
-        String line;
+        Scanner scanner = new Scanner(System.in);
+        long currentTime = 0;
 
-        while ((line = reader.readLine()) != null) {
-            String cmd = line.trim();
-            if (cmd.isEmpty()) {
-                continue;
-            }
+        System.out.println("--- Kung Fu Chess Initialized ---");
+        System.out.println(BoardPrinter.print(new GameSnapshot(board, gameState)));
 
-            String[] parts = cmd.split("\\s+");
-            String op = parts[0].toLowerCase();
+        // 2. לולאת המשחק - עכשיו היא מבוססת על הקלט המפורמט שלך
+        while (!gameState.isGameOver()) {
+            System.out.println("\nEnter command (move x1 y1 x2 y2 / jump x y / tick):");
+            String cmd = scanner.next();
 
-            if (op.equals("click") && parts.length == 3) {
-                if (gameState.isGameOver()) continue;
-                int x = Integer.parseInt(parts[1]);
-                int y = Integer.parseInt(parts[2]);
-                controller.handleMouseClick(x, y, clock);
-
-            } else if (op.equals("wait") && parts.length == 2) {
-                long ms = Long.parseLong(parts[1]);
-                clock += ms;
-                controller.update(clock);
-
-            } else if (op.equals("jump") && parts.length == 3) {
-                if (gameState.isGameOver()) continue;
-                int x = Integer.parseInt(parts[1]);
-                int y = Integer.parseInt(parts[2]);
-                controller.handleJumpCommand(x, y, clock);
-
-            } else if (op.equals("print") && parts.length == 2 && parts[1].equalsIgnoreCase("board")) {
-                printBoard(board, gameState);
-            }
-            // כל פקודה אחרת - מתעלמים ממנה, בדיוק כמו ב-Main7
-        }
-    }
-
-    /**
-     * קורא את חלק הלוח: שורת "Board:" פותחת, "Commands:" או שורה ריקה סוגרת.
-     * זהה לפורמט של readBoardFromUser ב-Main7.
-     */
-    private static List<String> readBoardSection(BufferedReader reader) throws IOException {
-        List<String> lines = new ArrayList<>();
-        boolean readingBoard = false;
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            String trimmed = line.trim();
-
-            if (trimmed.equalsIgnoreCase("Board:")) {
-                readingBoard = true;
-                continue;
-            }
-            if (trimmed.equalsIgnoreCase("Commands:") || trimmed.isEmpty()) {
-                break;
-            }
-            if (readingBoard) {
-                lines.add(line);
+            if (cmd.equals("move")) {
+                int x1 = scanner.nextInt(); int y1 = scanner.nextInt();
+                int x2 = scanner.nextInt(); int y2 = scanner.nextInt();
+                controller.handleMouseClick(x1, y1, currentTime);
+                controller.handleMouseClick(x2, y2, currentTime);
+            } else if (cmd.equals("jump")) {
+                int x = scanner.nextInt(); int y = scanner.nextInt();
+                controller.handleJumpCommand(x, y, currentTime);
+            } else if (cmd.equals("tick")) {
+                currentTime += 1000;
+                controller.update(currentTime);
+                // הדפסה מעודכנת בעזרת ה-Printer
+                System.out.println(BoardPrinter.print(new GameSnapshot(board, gameState)));
             }
         }
-        return lines;
-    }
-
-    private static void printBoard(Board board, GameState gameState) {
-        GameSnapshot snapshot = new GameSnapshot(board, gameState);
-        System.out.println(BoardPrinter.print(snapshot));
+        System.out.println("Game Over!");
     }
 }
