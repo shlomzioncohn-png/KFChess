@@ -135,6 +135,7 @@ public class Img {
 
     public void updateLive(Img newImage) {
         SwingUtilities.invokeLater(() -> {
+
             liveLabel.setIcon(new ImageIcon(newImage.get()));
             liveLabel.repaint();
         });

@@ -151,6 +151,7 @@ public class Renderer {
 
     //ציור מחדש
     public void renderFrame(Board board, long currentClock) throws java.io.IOException {
+
         Img frame = new Img().read("resources/board.png");
 
         int boardPixelWidth = frame.get().getWidth();
@@ -165,6 +166,12 @@ public class Renderer {
                 if (piece == null) continue;
 
                 PieceAnimator animator = getAnimatorFor(piece);
+
+                String expectedState = mapPieceStateToFolder(piece.getState());
+                if (!animator.getCurrentState().equals(expectedState)) {
+                    animator.changeState(expectedState, currentClock);
+                }
+
                 animator.update(currentClock);
 
                 Img pieceImg = new Img().read(
@@ -176,11 +183,20 @@ public class Renderer {
             }
         }
 
-        liveWindow.updateLive(frame);   // <-- קריטי: קוראים על liveWindow (יש לו liveLabel), מעבירים את frame כפרמטר
+        liveWindow.updateLive(frame);
     }
 
     public void setOnClick(ClickListener listener) {
         liveWindow.setClickListener(listener);
+    }
+
+    private String mapPieceStateToFolder(models.enums.PieceState state) {
+        return switch (state) {
+            case IDLE -> "idle";
+            case MOVING, AIRBORNE -> "move";
+            case JUMPING -> "jump";
+            case CAPTURED -> "idle"; // כלי שנתפס לא אמור להיות מצויר בכלל, אבל למקרה חירום
+        };
     }
 
 
