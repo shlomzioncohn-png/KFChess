@@ -9,11 +9,18 @@ import java.awt.Dimension;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Renderer {
 
     private static final int CELL_SIZE = 100;
+
+    //  מבנה נתונים שמחזיק לכל כלי — את ה-animator שלו
+    private final Map<Piece, PieceAnimator> animators = new HashMap<>();
+
+
 
 
     //  יוצרת img חדש וטוענת לתוכו את board.png ומציגה אותו
@@ -96,7 +103,7 @@ public class Renderer {
     }
 
     //בניית לוח אמיתי עם חיבור לאויבקט לוח
-    public void renderFromRealBoard(Board board) {
+    public void renderFromRealBoard(Board board, long currentClock)throws java.io.IOException {
         Img canvas = new Img().read("resources/board.png");
 
         int boardPixelWidth = canvas.get().getWidth();
@@ -111,8 +118,11 @@ public class Renderer {
                 Piece piece = board.getPieceAt(pos);
                 if (piece == null) continue;
 
+                PieceAnimator animator = getAnimatorFor(piece);
+                animator.update(currentClock);
+
                 Img pieceImg = new Img().read(
-                        "resources/pieces1/" + pieceCode(piece) + "/states/idle/sprites/1.png",
+                        animator.getCurrentSpritePath(),
                         new Dimension(cellWidth, cellHeight),
                         true, null
                 );
@@ -122,7 +132,17 @@ public class Renderer {
         canvas.show();
     }
 
-    
+    //מתודת עזר שמביאה (או יוצרת, אם עוד לא קיים) את ה-animator של כלי מסוים:
+    private PieceAnimator getAnimatorFor(Piece piece) throws java.io.IOException {
+        PieceAnimator animator = animators.get(piece);
+        if (animator == null) {
+            String folder = "resources/pieces1/" + pieceCode(piece);
+            animator = new PieceAnimator(folder);
+            animators.put(piece, animator);
+        }
+        return animator;
+    }
+
 
 }
 

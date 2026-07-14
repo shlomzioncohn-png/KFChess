@@ -27,10 +27,12 @@ public class Main {
         }
 
         Board board;
+        long clock = 0L;
+
         try {
             board = BoardParser.parse(String.join("\n", boardLines));
             Renderer renderer = new Renderer();
-            renderer.renderFromRealBoard(board);
+            renderer.renderFromRealBoard(board, clock);
         } catch (IllegalArgumentException e) {
             System.out.println("ERROR " + e.getMessage());
             return;
@@ -41,7 +43,6 @@ public class Main {
         GameEngine engine = new GameEngine(board, arbiter, gameState);
         Controller controller = new Controller(engine, board);
 
-        long clock = 0L;
         String line;
 
         while ((line = reader.readLine()) != null) {
