@@ -23,7 +23,6 @@ public class Renderer {
 
 
 
-
     //  יוצרת img חדש וטוענת לתוכו את board.png ומציגה אותו
     public void renderStaticBoard() {
         Img canvas = new Img().read("resources/board.png");
@@ -89,7 +88,6 @@ public class Renderer {
                 piece.drawOn(canvas, x, y);
             }
         }
-
         canvas.show();
     }
 
@@ -179,6 +177,10 @@ public class Renderer {
         }
 
         liveWindow.updateLive(frame);   // <-- קריטי: קוראים על liveWindow (יש לו liveLabel), מעבירים את frame כפרמטר
+    }
+
+    public void setOnClick(ClickListener listener) {
+        liveWindow.setClickListener(listener);
     }
 
 

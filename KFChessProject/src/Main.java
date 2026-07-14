@@ -1,4 +1,3 @@
-
 import engine.GameEngine;
 import io.BoardParser;
 import io.BoardPrinter;
@@ -6,6 +5,7 @@ import models.Board;
 import models.GameState;
 import realtime.RealTimeArbiter;
 import input.Controller;
+import input.GameClickHandler;
 import models.GameSnapshot;
 import view.Renderer;
 
@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
 public class Main {
 
@@ -26,14 +25,16 @@ public class Main {
             return;
         }
 
-        Board board;
         long clock = 0L;
+        Board board;
         Renderer renderer;
 
         try {
             board = BoardParser.parse(String.join("\n", boardLines));
             renderer = new Renderer();
             renderer.initWindow();
+            renderer.renderFrame(board, clock);   // <-- שורה חדשה: ציור ראשוני מיד, לא לחכות ל-wait הראשון
+
         } catch (IllegalArgumentException e) {
             System.out.println("ERROR " + e.getMessage());
             return;
@@ -43,6 +44,9 @@ public class Main {
         RealTimeArbiter arbiter = new RealTimeArbiter();
         GameEngine engine = new GameEngine(board, arbiter, gameState);
         Controller controller = new Controller(engine, board);
+
+        GameClickHandler clickHandler = new GameClickHandler(controller);
+        renderer.setOnClick(clickHandler);
 
         String line;
 
@@ -64,6 +68,7 @@ public class Main {
                 long ms = Long.parseLong(parts[1]);
                 clock += ms;
                 controller.update(clock);
+                clickHandler.setClock(clock);
                 renderer.renderFrame(board, clock);
 
             } else if (op.equals("jump") && parts.length == 3) {

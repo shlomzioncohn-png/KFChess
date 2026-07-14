@@ -14,7 +14,12 @@ import java.io.IOException;
  */
 public class Img {
 
+    private ClickListener clickListener;
+
+
     private BufferedImage img;
+    private JFrame liveFrame;
+    private JLabel liveLabel;
 
     /* ----------- load & optional resize ----------- */
     public Img read(String path,
@@ -108,12 +113,17 @@ public class Img {
 
     //פונקציות שהוספתי
 
-    private JFrame liveFrame;
-    private JLabel liveLabel;
-
     public void showLive() {
         SwingUtilities.invokeLater(() -> {
             liveLabel = new JLabel(new ImageIcon(img));
+            liveLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    if (clickListener != null) {
+                        clickListener.onClick(e.getX(), e.getY());
+                    }
+                }
+            });
             liveFrame = new JFrame("KungFu Chess");
             liveFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             liveFrame.add(liveLabel);
@@ -128,6 +138,10 @@ public class Img {
             liveLabel.setIcon(new ImageIcon(newImage.get()));
             liveLabel.repaint();
         });
+    }
+
+    public void setClickListener(ClickListener listener) {
+        this.clickListener = listener;
     }
 
 
