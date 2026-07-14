@@ -122,6 +122,13 @@ public class Renderer {
         canvas.show();
     }
 
-}
+    public static void main(String[] args) throws IOException {
+        AnimationConfig cfg = AnimationConfig.loadFromFile("resources/pieces1/QW/states/move/config.json");
+        System.out.println("speed=" + cfg.speedMetersPerSec + " next=" + cfg.nextStateWhenFinished
+                + " fps=" + cfg.framesPerSec + " loop=" + cfg.isLoop);
+    }
+
+
+    }
 
 
