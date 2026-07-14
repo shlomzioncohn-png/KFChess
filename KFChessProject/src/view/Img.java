@@ -56,7 +56,8 @@ public class Img {
         return this;
     }
 
-    public Img read(String path) { return read(path, null, false, null); }
+    public Img read(String path)
+    { return read(path, null, false, null); }
 
     /* ----------- draw this image onto another ----------- */
     public void drawOn(Img other, int x, int y) {
