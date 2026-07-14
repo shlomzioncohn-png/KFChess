@@ -16,6 +16,7 @@ import java.util.Map;
 public class Renderer {
 
     private static final int CELL_SIZE = 100;
+    private Img liveWindow;
 
     //  מבנה נתונים שמחזיק לכל כלי — את ה-animator שלו
     private final Map<Piece, PieceAnimator> animators = new HashMap<>();
@@ -141,6 +142,43 @@ public class Renderer {
             animators.put(piece, animator);
         }
         return animator;
+    }
+
+    //יצירת החלון בפעם הראשונה
+    public void initWindow() throws java.io.IOException {
+        liveWindow = new Img().read("resources/board.png");
+        liveWindow.showLive();
+    }
+
+
+    //ציור מחדש
+    public void renderFrame(Board board, long currentClock) throws java.io.IOException {
+        Img frame = new Img().read("resources/board.png");
+
+        int boardPixelWidth = frame.get().getWidth();
+        int boardPixelHeight = frame.get().getHeight();
+        int cellWidth = boardPixelWidth / board.getWidth();
+        int cellHeight = boardPixelHeight / board.getHeight();
+
+        for (int row = 0; row < board.getHeight(); row++) {
+            for (int col = 0; col < board.getWidth(); col++) {
+                Position pos = new Position(row, col);
+                Piece piece = board.getPieceAt(pos);
+                if (piece == null) continue;
+
+                PieceAnimator animator = getAnimatorFor(piece);
+                animator.update(currentClock);
+
+                Img pieceImg = new Img().read(
+                        animator.getCurrentSpritePath(),
+                        new Dimension(cellWidth, cellHeight),
+                        true, null
+                );
+                pieceImg.drawOn(frame, col * cellWidth, row * cellHeight);
+            }
+        }
+
+        liveWindow.updateLive(frame);   // <-- קריטי: קוראים על liveWindow (יש לו liveLabel), מעבירים את frame כפרמטר
     }
 
 

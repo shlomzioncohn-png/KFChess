@@ -105,4 +105,30 @@ public class Img {
 
     /* ----------- access (optional) ----------- */
     public BufferedImage get() { return img; }
+
+    //פונקציות שהוספתי
+
+    private JFrame liveFrame;
+    private JLabel liveLabel;
+
+    public void showLive() {
+        SwingUtilities.invokeLater(() -> {
+            liveLabel = new JLabel(new ImageIcon(img));
+            liveFrame = new JFrame("KungFu Chess");
+            liveFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            liveFrame.add(liveLabel);
+            liveFrame.pack();
+            liveFrame.setLocationRelativeTo(null);
+            liveFrame.setVisible(true);
+        });
+    }
+
+    public void updateLive(Img newImage) {
+        SwingUtilities.invokeLater(() -> {
+            liveLabel.setIcon(new ImageIcon(newImage.get()));
+            liveLabel.repaint();
+        });
+    }
+
+
 }

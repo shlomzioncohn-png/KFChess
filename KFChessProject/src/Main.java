@@ -28,11 +28,12 @@ public class Main {
 
         Board board;
         long clock = 0L;
+        Renderer renderer;
 
         try {
             board = BoardParser.parse(String.join("\n", boardLines));
-            Renderer renderer = new Renderer();
-            renderer.renderFromRealBoard(board, clock);
+            renderer = new Renderer();
+            renderer.initWindow();
         } catch (IllegalArgumentException e) {
             System.out.println("ERROR " + e.getMessage());
             return;
@@ -63,6 +64,7 @@ public class Main {
                 long ms = Long.parseLong(parts[1]);
                 clock += ms;
                 controller.update(clock);
+                renderer.renderFrame(board, clock);
 
             } else if (op.equals("jump") && parts.length == 3) {
                 int x = Integer.parseInt(parts[1]);
