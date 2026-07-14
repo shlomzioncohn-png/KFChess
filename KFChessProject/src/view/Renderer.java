@@ -1,5 +1,10 @@
 package view;
 
+import io.BoardParser;
+import models.Board;
+import models.Piece;
+import models.Position;
+
 import java.awt.Dimension;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -80,11 +85,47 @@ public class Renderer {
         canvas.show();
     }
 
-    public static void main(String[] args) {
-        try {
-            new Renderer().renderFullBoardFromCsv();
+    //מתודת עזר  להמרת Piece לקידומת שם תיקייה
+    private String pieceCode(Piece piece) {
+        String color = piece.getColor().name().substring(0, 1); // "W" / "B"
+        String type = switch (piece.getType()) {
+            case KING -> "K"; case QUEEN -> "Q"; case ROOK -> "R";
+            case BISHOP -> "B"; case KNIGHT -> "N"; case PAWN -> "P";
+        };
+        return type + color; // לדוגמה "QW"
+    }
+
+    //בניית לוח אמיתי עם חיבור לאויבקט לוח
+    public void renderFromRealBoard(Board board) {
+        Img canvas = new Img().read("resources/board.png");
+
+        int boardPixelWidth = canvas.get().getWidth();
+        int boardPixelHeight = canvas.get().getHeight();
+
+        int cellWidth = boardPixelWidth / board.getWidth();
+        int cellHeight = boardPixelHeight / board.getHeight();
+
+        for (int row = 0; row < board.getHeight(); row++) {
+            for (int col = 0; col < board.getWidth(); col++) {
+                Position pos = new Position(row, col);
+                Piece piece = board.getPieceAt(pos);
+                if (piece == null) continue;
+
+                Img pieceImg = new Img().read(
+                        "resources/pieces1/" + pieceCode(piece) + "/states/idle/sprites/1.png",
+                        new Dimension(cellWidth, cellHeight),
+                        true, null
+                );
+                pieceImg.drawOn(canvas, col * cellWidth, row * cellHeight);
+            }
         }
-        catch (IOException ex) {}
+        canvas.show();
+    }
+
+    public static void main(String[] args) throws Exception{
+        String text = Files.readString(Paths.get("resources/starting_position.txt"));
+        Board board = BoardParser.parse(text);
+        new Renderer().renderFromRealBoard(board);
     }
 }
 
