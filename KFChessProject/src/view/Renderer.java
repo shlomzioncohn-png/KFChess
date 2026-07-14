@@ -122,11 +122,6 @@ public class Renderer {
         canvas.show();
     }
 
-    public static void main(String[] args) throws Exception{
-        String text = Files.readString(Paths.get("resources/starting_position.txt"));
-        Board board = BoardParser.parse(text);
-        new Renderer().renderFromRealBoard(board);
-    }
 }
 
 

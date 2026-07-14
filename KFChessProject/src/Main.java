@@ -7,6 +7,7 @@ import models.GameState;
 import realtime.RealTimeArbiter;
 import input.Controller;
 import models.GameSnapshot;
+import view.Renderer;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -28,6 +29,8 @@ public class Main {
         Board board;
         try {
             board = BoardParser.parse(String.join("\n", boardLines));
+            Renderer renderer = new Renderer();
+            renderer.renderFromRealBoard(board);
         } catch (IllegalArgumentException e) {
             System.out.println("ERROR " + e.getMessage());
             return;
