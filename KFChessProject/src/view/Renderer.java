@@ -1,5 +1,7 @@
 package view;
 
+import models.Position;
+
 import java.awt.Color;
 import java.awt.Dimension;
 
@@ -27,6 +29,7 @@ public class Renderer {
                 snapshot.boardWidth() * cellSize,
                 snapshot.boardHeight() * cellSize
         );
+        drawLegalMoves(canvas, snapshot);
 
         for (PieceRenderSnapshot piece : snapshot.pieces()) {
             Img pieceImage = imageLoader.getFrame(piece);
@@ -87,5 +90,13 @@ public class Renderer {
 
     public void setOnClick(ClickListener listener) {
         gameWindow.setClickListener(listener);
+    }
+
+    private void drawLegalMoves(Img canvas, RenderSnapshot snapshot) {
+        for (Position pos : snapshot.legalMoves()) {
+            int x = pos.getCol() * cellSize;
+            int y = pos.getRow() * cellSize;
+            canvas.fillRect(x, y, cellSize, cellSize, new Color(0, 200, 0, 90));
+        }
     }
 }

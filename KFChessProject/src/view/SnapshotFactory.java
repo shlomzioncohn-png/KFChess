@@ -45,6 +45,10 @@ public class SnapshotFactory {
                 : fullLog.subList(fullLog.size() - 5, fullLog.size());
 
 
+        List<Position> legalMoves = selectedPosition != null
+                ? new rules.RuleEngine().getLegalDestinations(board, selectedPosition)
+                : List.of();
+
         return new RenderSnapshot(
                 board.getWidth(), board.getHeight(),
                 pieceSnapshots, selectedPosition,
@@ -53,7 +57,8 @@ public class SnapshotFactory {
                 gameState.getScore(PieceColor.BLACK),
                 recentLog,
                 whiteName,
-                blackName
+                blackName,
+                legalMoves
 
         );
     }

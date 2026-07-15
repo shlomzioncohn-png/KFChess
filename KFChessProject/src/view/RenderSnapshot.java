@@ -15,7 +15,9 @@ public record RenderSnapshot(
         int blackScore,
         List<String> moveLog,
         String whitePlayerName,
-        String blackPlayerName
+        String blackPlayerName,
+        List<Position> legalMoves
+
 
 
 
@@ -23,5 +25,7 @@ public record RenderSnapshot(
     public RenderSnapshot {
         pieces = List.copyOf(pieces);
         moveLog = List.copyOf(moveLog);
+        legalMoves = List.copyOf(legalMoves);
+
     }
 }

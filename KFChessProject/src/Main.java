@@ -49,7 +49,7 @@ public class Main {
             engine = new GameEngine(board, arbiter, gameState);
             controller = new Controller(engine, board);
 
-            renderer = new Renderer("resources/pieces_classic", CELL_SIZE);
+            renderer = new Renderer("resources/pieces_mine", CELL_SIZE);
             renderer.initWindow(board.getWidth(), board.getHeight());
 
             frameRenderer = clockValue -> {
