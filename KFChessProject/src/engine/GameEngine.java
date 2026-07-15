@@ -15,7 +15,7 @@ import java.util.List;
 
 public class GameEngine {
 
-    private static final long JUMP_DURATION = 1000;
+    public  static final long JUMP_DURATION = 1000;
 
     private final GameState gameState;
     private final Board board;
@@ -123,5 +123,9 @@ public class GameEngine {
         }
 
         return true;
+    }
+
+    public List<realtime.Motion> getActiveMotions() {
+        return List.copyOf(activeMotions);
     }
 }

@@ -52,4 +52,8 @@ public class Controller {
     public void update(long currentClock) {
         engine.update(currentClock);
     }
+
+    public Position getSelectedPosition() {
+        return selectedPosition;
+    }
 }

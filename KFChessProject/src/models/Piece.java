@@ -75,6 +75,10 @@ public class Piece {
         return state == PieceState.JUMPING && currentClock < jumpExpiryTime;
     }
 
+    public long getJumpExpiryTime() {
+        return jumpExpiryTime;
+    }
+
 
 
 

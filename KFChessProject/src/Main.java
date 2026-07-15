@@ -6,8 +6,9 @@ import models.GameState;
 import realtime.RealTimeArbiter;
 import input.Controller;
 import input.GameClickHandler;
-import models.GameSnapshot;
 import view.Renderer;
+import view.RenderSnapshot;
+import view.SnapshotFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,6 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
+
+    private static final int CELL_SIZE = 100;
 
     public static void main(String[] args) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
@@ -27,23 +30,30 @@ public class Main {
 
         long clock = 0L;
         Board board;
+        RealTimeArbiter arbiter;
+        GameState gameState;
+        GameEngine engine;
+        Controller controller;
         Renderer renderer;
 
         try {
             board = BoardParser.parse(String.join("\n", boardLines));
-            renderer = new Renderer();
-            renderer.initWindow();
-            renderer.renderFrame(board, clock);   // <-- שורה חדשה: ציור ראשוני מיד, לא לחכות ל-wait הראשון
+            arbiter = new RealTimeArbiter();
+            gameState = new GameState();
+            engine = new GameEngine(board, arbiter, gameState);
+            controller = new Controller(engine, board);
+
+            renderer = new Renderer("resources/pieces1", CELL_SIZE);
+            renderer.initWindow(board.getWidth(), board.getHeight());
+
+            RenderSnapshot initialSnapshot = SnapshotFactory.build(
+                    board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clock);
+            renderer.renderFrame(initialSnapshot);
 
         } catch (IllegalArgumentException e) {
             System.out.println("ERROR " + e.getMessage());
             return;
         }
-
-        GameState gameState = new GameState();
-        RealTimeArbiter arbiter = new RealTimeArbiter();
-        GameEngine engine = new GameEngine(board, arbiter, gameState);
-        Controller controller = new Controller(engine, board);
 
         GameClickHandler clickHandler = new GameClickHandler(controller);
         renderer.setOnClick(clickHandler);
@@ -52,33 +62,29 @@ public class Main {
 
         while ((line = reader.readLine()) != null) {
             String cmd = line.trim();
-            if (cmd.isEmpty()) {
-                continue;
-            }
+            if (cmd.isEmpty()) continue;
 
             String[] parts = cmd.split("\\s+");
             String op = parts[0].toLowerCase();
 
             if (op.equals("click") && parts.length == 3) {
-                int x = Integer.parseInt(parts[1]);
-                int y = Integer.parseInt(parts[2]);
-                controller.handleMouseClick(x, y, clock);
+                controller.handleMouseClick(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), clock);
 
             } else if (op.equals("wait") && parts.length == 2) {
-                long ms = Long.parseLong(parts[1]);
-                clock += ms;
+                clock += Long.parseLong(parts[1]);
                 controller.update(clock);
                 clickHandler.setClock(clock);
-                renderer.renderFrame(board, clock);
+
+                RenderSnapshot snapshot = SnapshotFactory.build(
+                        board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clock);
+                renderer.renderFrame(snapshot);
 
             } else if (op.equals("jump") && parts.length == 3) {
-                int x = Integer.parseInt(parts[1]);
-                int y = Integer.parseInt(parts[2]);
-                controller.handleJumpCommand(x, y, clock);
+                controller.handleJumpCommand(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), clock);
 
             } else if (op.equals("print") && parts.length == 2 && parts[1].equalsIgnoreCase("board")) {
-                GameSnapshot snapshot = new GameSnapshot(board, gameState);
-                System.out.println(BoardPrinter.print(snapshot));
+                models.GameSnapshot printSnapshot = new models.GameSnapshot(board, gameState);
+                System.out.println(BoardPrinter.print(printSnapshot));
             }
         }
     }
@@ -87,19 +93,11 @@ public class Main {
         List<String> lines = new ArrayList<>();
         boolean readingBoard = false;
         String line;
-
         while ((line = reader.readLine()) != null) {
             String trimmed = line.trim();
-            if (trimmed.equalsIgnoreCase("Board:")) {
-                readingBoard = true;
-                continue;
-            }
-            if (trimmed.equalsIgnoreCase("Commands:") || (trimmed.isEmpty() && readingBoard)) {
-                break;
-            }
-            if (readingBoard) {
-                lines.add(line);
-            }
+            if (trimmed.equalsIgnoreCase("Board:")) { readingBoard = true; continue; }
+            if (trimmed.equalsIgnoreCase("Commands:") || (trimmed.isEmpty() && readingBoard)) break;
+            if (readingBoard) lines.add(line);
         }
         return lines;
     }
