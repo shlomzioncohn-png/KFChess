@@ -2,11 +2,11 @@ package view;
 
 import java.awt.Color;
 import java.awt.Dimension;
-import java.io.IOException;
 
 public class Renderer {
 
     private static final String BOARD_IMAGE_PATH = "resources/board.png";
+    private static final int SIDEBAR_WIDTH = 250;
 
     private final GameWindow gameWindow = new GameWindow();
     private final PieceImageLoader imageLoader;
@@ -18,11 +18,15 @@ public class Renderer {
     }
 
     public void initWindow(int boardWidth, int boardHeight) {
-        gameWindow.open(loadBoardImage(boardWidth, boardHeight));
+        Img canvas = createCanvas(boardWidth * cellSize, boardHeight * cellSize);
+        gameWindow.open(canvas);
     }
 
     public void renderFrame(RenderSnapshot snapshot) {
-        Img canvas = loadBoardImage(snapshot.boardWidth(), snapshot.boardHeight());
+        Img canvas = createCanvas(
+                snapshot.boardWidth() * cellSize,
+                snapshot.boardHeight() * cellSize
+        );
 
         for (PieceRenderSnapshot piece : snapshot.pieces()) {
             Img pieceImage = imageLoader.getFrame(piece);
@@ -31,7 +35,6 @@ public class Renderer {
 
         drawSelectedCell(canvas, snapshot);
         drawScore(canvas, snapshot);
-        drawPlayerNames(canvas, snapshot);
         drawMoveLog(canvas, snapshot);
 
         if (snapshot.gameOver()) {
@@ -41,29 +44,16 @@ public class Renderer {
         gameWindow.update(canvas);
     }
 
-    private void drawMoveLog(Img canvas, RenderSnapshot snapshot) {
-        int startY = 20;
-        int lineHeight = 16;
-        int x = canvas.get().getWidth() - 260;
+    private Img createCanvas(int boardPixelWidth, int boardPixelHeight) {
+        Img canvas = Img.blank(boardPixelWidth + SIDEBAR_WIDTH, boardPixelHeight, Color.WHITE);
 
-        for (int i = 0; i < snapshot.moveLog().size(); i++) {
-            canvas.putText(snapshot.moveLog().get(i), x, startY + i * lineHeight, 0.8f, Color.BLUE, 1);
-        }
-    }
+        Img boardImg = new Img().read(BOARD_IMAGE_PATH,
+                new Dimension(boardPixelWidth, boardPixelHeight), false, null);
+        boardImg.drawOn(canvas, 0, 0);
 
-    private void drawPlayerNames(Img canvas, RenderSnapshot snapshot) {
-        canvas.putText(snapshot.whitePlayerName(), 10, canvas.get().getHeight() - 60, 1.2f, Color.BLACK, 1);
-        canvas.putText(snapshot.blackPlayerName(), 10, canvas.get().getHeight() - 80, 1.2f, Color.BLACK, 1);
-    }
+        canvas.fillRect(boardPixelWidth, 0, SIDEBAR_WIDTH, boardPixelHeight, new Color(240, 240, 240));
 
-    private void drawScore(Img canvas, RenderSnapshot snapshot) {
-        canvas.putText("White: " + snapshot.whiteScore(), 10, canvas.get().getHeight() - 40, 1.2f, Color.RED, 1);
-        canvas.putText("Black: " + snapshot.blackScore(), 10, canvas.get().getHeight() - 20, 1.2f, Color.RED, 1);
-    }
-
-    private void drawGameOver(Img canvas, RenderSnapshot snapshot) {
-        String text = snapshot.winner() == null ? "Game Over" : snapshot.winner() + " wins";
-        canvas.putText(text, 40, 60, 2.0f, Color.RED, 2);
+        return canvas;
     }
 
     private void drawSelectedCell(Img canvas, RenderSnapshot snapshot) {
@@ -73,9 +63,26 @@ public class Renderer {
         canvas.drawRect(x, y, cellSize, cellSize, new Color(255, 215, 0, 180), 4);
     }
 
-    private Img loadBoardImage(int boardWidth, int boardHeight) {
-        return new Img().read(BOARD_IMAGE_PATH,
-                new Dimension(boardWidth * cellSize, boardHeight * cellSize), false, null);
+    private void drawScore(Img canvas, RenderSnapshot snapshot) {
+        int x = snapshot.boardWidth() * cellSize + 15;
+        canvas.putText("Score", x, 30, 1.4f, Color.DARK_GRAY, 2);
+        canvas.putText(snapshot.whitePlayerName() + ": " + snapshot.whiteScore(), x, 60, 1.1f, Color.BLACK, 1);
+        canvas.putText(snapshot.blackPlayerName() + ": " + snapshot.blackScore(), x, 85, 1.1f, Color.BLACK, 1);
+    }
+
+    private void drawMoveLog(Img canvas, RenderSnapshot snapshot) {
+        int x = snapshot.boardWidth() * cellSize + 15;
+        int startY = 130;
+        canvas.putText("Move Log", x, startY, 1.2f, Color.DARK_GRAY, 2);
+
+        for (int i = 0; i < snapshot.moveLog().size(); i++) {
+            canvas.putText(snapshot.moveLog().get(i), x, startY + 25 + i * 18, 0.75f, Color.BLUE, 1);
+        }
+    }
+
+    private void drawGameOver(Img canvas, RenderSnapshot snapshot) {
+        String text = snapshot.winner() == null ? "Game Over" : snapshot.winner() + " wins";
+        canvas.putText(text, 40, 60, 2.0f, Color.RED, 2);
     }
 
     public void setOnClick(ClickListener listener) {

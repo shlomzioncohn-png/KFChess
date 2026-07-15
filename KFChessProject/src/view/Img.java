@@ -136,4 +136,26 @@ public class Img {
         return result;
     }
 
+    public static Img blank(int width, int height, Color backgroundColor) {
+        BufferedImage canvas = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = canvas.createGraphics();
+        g.setColor(backgroundColor);
+        g.fillRect(0, 0, width, height);
+        g.dispose();
+
+        Img result = new Img();
+        result.img = canvas;
+        return result;
+    }
+
+    public void fillRect(int x, int y, int width, int height, Color color) {
+        if (img == null) {
+            throw new IllegalStateException("Image not loaded.");
+        }
+        Graphics2D g = img.createGraphics();
+        g.setColor(color);
+        g.fillRect(x, y, width, height);
+        g.dispose();
+    }
+
 }
