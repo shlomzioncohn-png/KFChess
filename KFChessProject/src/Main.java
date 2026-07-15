@@ -49,13 +49,13 @@ public class Main {
             renderer.initWindow(board.getWidth(), board.getHeight());
 
             frameRenderer = clockValue -> {
-                RenderSnapshot snap = SnapshotFactory.build(
-                        board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clockValue);
+                RenderSnapshot snap = SnapshotFactory.build(board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clockValue,gameState);
+
                 renderer.renderFrame(snap);
             };
 
             RenderSnapshot initialSnapshot = SnapshotFactory.build(
-                    board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clock);
+                    board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clock,gameState);
             renderer.renderFrame(initialSnapshot);
 
         } catch (IllegalArgumentException e) {
@@ -84,7 +84,7 @@ public class Main {
                 clickHandler.setClock(clock);
 
                 RenderSnapshot snapshot = SnapshotFactory.build(
-                        board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clock);
+                        board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clock,gameState);
                 renderer.renderFrame(snapshot);
 
             } else if (op.equals("jump") && parts.length == 3) {

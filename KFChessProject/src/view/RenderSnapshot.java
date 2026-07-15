@@ -9,7 +9,10 @@ public record RenderSnapshot(
         int boardHeight,
         List<PieceRenderSnapshot> pieces,
         Position selectedPosition,
-        boolean gameOver
+        boolean gameOver,
+        String winner
+
+
 ) {
     public RenderSnapshot {
         pieces = List.copyOf(pieces);

@@ -30,7 +30,17 @@ public class Renderer {
         }
 
         drawSelectedCell(canvas, snapshot);
+
+        if (snapshot.gameOver()) {
+            drawGameOver(canvas, snapshot);
+        }
+
         gameWindow.update(canvas);
+    }
+
+    private void drawGameOver(Img canvas, RenderSnapshot snapshot) {
+        String text = snapshot.winner() == null ? "Game Over" : snapshot.winner() + " wins";
+        canvas.putText(text, 40, 60, 2.0f, Color.RED, 2);
     }
 
     private void drawSelectedCell(Img canvas, RenderSnapshot snapshot) {

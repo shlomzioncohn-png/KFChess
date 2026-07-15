@@ -2,6 +2,7 @@ package view;
 
 import engine.GameEngine;
 import models.Board;
+import models.GameState;
 import models.Piece;
 import models.Position;
 import models.enums.PieceState;
@@ -16,7 +17,8 @@ public class SnapshotFactory {
     public static RenderSnapshot build(Board board, GameEngine engine,
                                        RealTimeArbiter arbiter,
                                        Position selectedPosition,
-                                       int cellSize, long currentClock) {
+                                       int cellSize, long currentClock,
+                                       GameState gameState) {
 
         List<PieceRenderSnapshot> pieceSnapshots = new ArrayList<>();
         List<Motion> activeMotions = engine.getActiveMotions();
@@ -30,10 +32,15 @@ public class SnapshotFactory {
                 pieceSnapshots.add(buildPieceSnapshot(piece, activeMotions, arbiter, cellSize, currentClock));
             }
         }
+        String winnerText = gameState.isGameOver() && gameState.getWinner() != null
+                ? gameState.getWinner().name()
+                : null;
+
 
         return new RenderSnapshot(
                 board.getWidth(), board.getHeight(),
-                pieceSnapshots, selectedPosition, false
+                pieceSnapshots, selectedPosition,
+                gameState.isGameOver(), winnerText
         );
     }
 
