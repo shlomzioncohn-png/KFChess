@@ -6,6 +6,7 @@ import models.GameState;
 import realtime.RealTimeArbiter;
 import input.Controller;
 import input.GameClickHandler;
+import view.FrameRenderer;
 import view.Renderer;
 import view.RenderSnapshot;
 import view.SnapshotFactory;
@@ -35,6 +36,7 @@ public class Main {
         GameEngine engine;
         Controller controller;
         Renderer renderer;
+        FrameRenderer frameRenderer;
 
         try {
             board = BoardParser.parse(String.join("\n", boardLines));
@@ -46,6 +48,12 @@ public class Main {
             renderer = new Renderer("resources/pieces1", CELL_SIZE);
             renderer.initWindow(board.getWidth(), board.getHeight());
 
+            frameRenderer = clockValue -> {
+                RenderSnapshot snap = SnapshotFactory.build(
+                        board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clockValue);
+                renderer.renderFrame(snap);
+            };
+
             RenderSnapshot initialSnapshot = SnapshotFactory.build(
                     board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clock);
             renderer.renderFrame(initialSnapshot);
@@ -55,7 +63,7 @@ public class Main {
             return;
         }
 
-        GameClickHandler clickHandler = new GameClickHandler(controller);
+        GameClickHandler clickHandler = new GameClickHandler(controller, frameRenderer);
         renderer.setOnClick(clickHandler);
 
         String line;
