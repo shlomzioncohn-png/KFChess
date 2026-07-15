@@ -4,8 +4,6 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.awt.geom.AffineTransform;
-import java.awt.image.AffineTransformOp;
 import java.io.File;
 import java.io.IOException;
 
@@ -14,12 +12,10 @@ import java.io.IOException;
  */
 public class Img {
 
-    private ClickListener clickListener;
 
 
     private BufferedImage img;
-    private JFrame liveFrame;
-    private JLabel liveLabel;
+
 
     /* ----------- load & optional resize ----------- */
     public Img read(String path,
@@ -112,38 +108,32 @@ public class Img {
     public BufferedImage get() { return img; }
 
     //פונקציות שהוספתי
-
-    public void showLive() {
-        SwingUtilities.invokeLater(() -> {
-            liveLabel = new JLabel(new ImageIcon(img));
-            liveLabel.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override
-                public void mouseClicked(java.awt.event.MouseEvent e) {
-                    if (clickListener != null) {
-                        clickListener.onClick(e.getX(), e.getY());
-                    }
-                }
-            });
-            liveFrame = new JFrame("KungFu Chess");
-            liveFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            liveFrame.add(liveLabel);
-            liveFrame.pack();
-            liveFrame.setLocationRelativeTo(null);
-            liveFrame.setVisible(true);
-        });
+    /* ----------- draw a rectangle outline (for selection highlighting) ----------- */
+    public void drawRect(int x, int y, int width, int height, Color color, int thickness) {
+        if (img == null) {
+            throw new IllegalStateException("Image not loaded.");
+        }
+        Graphics2D g = img.createGraphics();
+        g.setColor(color);
+        g.setStroke(new BasicStroke(thickness));
+        g.drawRect(x, y, width, height);
+        g.dispose();
     }
 
-    public void updateLive(Img newImage) {
-        SwingUtilities.invokeLater(() -> {
+    /* ----------- deep copy of this image ----------- */
+    public Img copy() {
+        if (img == null) {
+            throw new IllegalStateException("Image not loaded.");
+        }
+        BufferedImage copyImg = new BufferedImage(
+                img.getWidth(), img.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = copyImg.createGraphics();
+        g.drawImage(img, 0, 0, null);
+        g.dispose();
 
-            liveLabel.setIcon(new ImageIcon(newImage.get()));
-            liveLabel.repaint();
-        });
+        Img result = new Img();
+        result.img = copyImg;
+        return result;
     }
-
-    public void setClickListener(ClickListener listener) {
-        this.clickListener = listener;
-    }
-
 
 }
