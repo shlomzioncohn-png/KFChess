@@ -31,6 +31,7 @@ public class Renderer {
 
         drawSelectedCell(canvas, snapshot);
         drawScore(canvas, snapshot);
+        drawPlayerNames(canvas, snapshot);
         drawMoveLog(canvas, snapshot);
 
         if (snapshot.gameOver()) {
@@ -48,6 +49,11 @@ public class Renderer {
         for (int i = 0; i < snapshot.moveLog().size(); i++) {
             canvas.putText(snapshot.moveLog().get(i), x, startY + i * lineHeight, 0.8f, Color.BLUE, 1);
         }
+    }
+
+    private void drawPlayerNames(Img canvas, RenderSnapshot snapshot) {
+        canvas.putText(snapshot.whitePlayerName(), 10, canvas.get().getHeight() - 60, 1.2f, Color.BLACK, 1);
+        canvas.putText(snapshot.blackPlayerName(), 10, canvas.get().getHeight() - 80, 1.2f, Color.BLACK, 1);
     }
 
     private void drawScore(Img canvas, RenderSnapshot snapshot) {

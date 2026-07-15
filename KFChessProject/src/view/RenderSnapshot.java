@@ -13,7 +13,10 @@ public record RenderSnapshot(
         String winner,
         int whiteScore,
         int blackScore,
-        List<String> moveLog
+        List<String> moveLog,
+        String whitePlayerName,
+        String blackPlayerName
+
 
 
 ) {

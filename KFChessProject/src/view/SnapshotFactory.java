@@ -19,7 +19,9 @@ public class SnapshotFactory {
                                        RealTimeArbiter arbiter,
                                        Position selectedPosition,
                                        int cellSize, long currentClock,
-                                       GameState gameState) {
+                                       GameState gameState,
+                                       String whiteName,
+                                       String blackName) {
 
         List<PieceRenderSnapshot> pieceSnapshots = new ArrayList<>();
         List<Motion> activeMotions = engine.getActiveMotions();
@@ -49,7 +51,9 @@ public class SnapshotFactory {
                 gameState.isGameOver(), winnerText,
                 gameState.getScore(PieceColor.WHITE),
                 gameState.getScore(PieceColor.BLACK),
-                recentLog
+                recentLog,
+                whiteName,
+                blackName
 
         );
     }

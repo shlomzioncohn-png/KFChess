@@ -20,6 +20,9 @@ import java.util.List;
 public class Main {
 
     private static final int CELL_SIZE = 100;
+    private static final String WHITE_NAME = "Player White";
+    private static final String BLACK_NAME = "Player Black";
+    private static final boolean OBSERVER_MODE = false;  // שני עם true = מצב צופה
 
     public static void main(String[] args) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
@@ -37,6 +40,7 @@ public class Main {
         Controller controller;
         Renderer renderer;
         FrameRenderer frameRenderer;
+        GameClickHandler clickHandler;
 
         try {
             board = BoardParser.parse(String.join("\n", boardLines));
@@ -45,17 +49,19 @@ public class Main {
             engine = new GameEngine(board, arbiter, gameState);
             controller = new Controller(engine, board);
 
-            renderer = new Renderer("resources/pieces2", CELL_SIZE);
+            renderer = new Renderer("resources/pieces_classic", CELL_SIZE);
             renderer.initWindow(board.getWidth(), board.getHeight());
 
             frameRenderer = clockValue -> {
-                RenderSnapshot snap = SnapshotFactory.build(board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clockValue,gameState);
-
+                RenderSnapshot snap = SnapshotFactory.build(
+                        board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clockValue,
+                        gameState, WHITE_NAME, BLACK_NAME);
                 renderer.renderFrame(snap);
             };
 
             RenderSnapshot initialSnapshot = SnapshotFactory.build(
-                    board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clock,gameState);
+                    board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clock,
+                    gameState, WHITE_NAME, BLACK_NAME);
             renderer.renderFrame(initialSnapshot);
 
         } catch (IllegalArgumentException e) {
@@ -63,8 +69,12 @@ public class Main {
             return;
         }
 
-        GameClickHandler clickHandler = new GameClickHandler(controller, frameRenderer);
-        renderer.setOnClick(clickHandler);
+        if (!OBSERVER_MODE) {
+            clickHandler = new GameClickHandler(controller, frameRenderer);
+            renderer.setOnClick(clickHandler);
+        } else {
+            clickHandler = null;
+        }
 
         String line;
 
@@ -81,10 +91,13 @@ public class Main {
             } else if (op.equals("wait") && parts.length == 2) {
                 clock += Long.parseLong(parts[1]);
                 controller.update(clock);
-                clickHandler.setClock(clock);
+                if (clickHandler != null) {
+                    clickHandler.setClock(clock);
+                }
 
                 RenderSnapshot snapshot = SnapshotFactory.build(
-                        board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clock,gameState);
+                        board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE, clock,
+                        gameState, WHITE_NAME, BLACK_NAME);
                 renderer.renderFrame(snapshot);
 
             } else if (op.equals("jump") && parts.length == 3) {
