@@ -7,6 +7,7 @@ import models.Position;
 import models.enums.PieceState;
 import realtime.Motion;
 import realtime.RealTimeArbiter;
+import rules.PieceValue;
 import rules.PromotionRule;
 import rules.WinCondition;
 
@@ -50,6 +51,7 @@ public class GameEngine {
 
         if (result.isSuccess()) {
             piece.setState(PieceState.AIRBORNE);
+
 
             Motion motion = new Motion(
                     piece,
@@ -108,6 +110,8 @@ public class GameEngine {
 
         // 3. תפיסה רגילה: הסרת היעד והעברת הכלי
         if (target != null) {
+            gameState.addScore(movingPiece.getColor(), PieceValue.getValue(target.getType()));  // <-- חדש
+
             if (WinCondition.isDecisive(target)) {
                 gameState.setGameOver(true);
                 gameState.setWinner(movingPiece.getColor());
@@ -117,6 +121,11 @@ public class GameEngine {
 
         board.movePiece(src, dest);
         movingPiece.setState(PieceState.IDLE);
+
+        String logEntry = movingPiece.getColor() + " " + movingPiece.getType() + " " + src + " -> " + dest
+                + (target != null ? " (captured " + target.getType() + ")" : "");
+        gameState.addLogEntry(logEntry);
+
 
         if (PromotionRule.isEligible(board, movingPiece, dest)) {
             movingPiece.promote(PromotionRule.promotedType());

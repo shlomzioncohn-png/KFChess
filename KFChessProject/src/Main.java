@@ -45,7 +45,7 @@ public class Main {
             engine = new GameEngine(board, arbiter, gameState);
             controller = new Controller(engine, board);
 
-            renderer = new Renderer("resources/pieces1", CELL_SIZE);
+            renderer = new Renderer("resources/pieces2", CELL_SIZE);
             renderer.initWindow(board.getWidth(), board.getHeight());
 
             frameRenderer = clockValue -> {

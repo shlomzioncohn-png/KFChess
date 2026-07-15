@@ -10,11 +10,15 @@ public record RenderSnapshot(
         List<PieceRenderSnapshot> pieces,
         Position selectedPosition,
         boolean gameOver,
-        String winner
+        String winner,
+        int whiteScore,
+        int blackScore,
+        List<String> moveLog
 
 
 ) {
     public RenderSnapshot {
         pieces = List.copyOf(pieces);
+        moveLog = List.copyOf(moveLog);
     }
 }

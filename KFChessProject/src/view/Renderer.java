@@ -30,12 +30,29 @@ public class Renderer {
         }
 
         drawSelectedCell(canvas, snapshot);
+        drawScore(canvas, snapshot);
+        drawMoveLog(canvas, snapshot);
 
         if (snapshot.gameOver()) {
             drawGameOver(canvas, snapshot);
         }
 
         gameWindow.update(canvas);
+    }
+
+    private void drawMoveLog(Img canvas, RenderSnapshot snapshot) {
+        int startY = 20;
+        int lineHeight = 16;
+        int x = canvas.get().getWidth() - 260;
+
+        for (int i = 0; i < snapshot.moveLog().size(); i++) {
+            canvas.putText(snapshot.moveLog().get(i), x, startY + i * lineHeight, 0.8f, Color.BLUE, 1);
+        }
+    }
+
+    private void drawScore(Img canvas, RenderSnapshot snapshot) {
+        canvas.putText("White: " + snapshot.whiteScore(), 10, canvas.get().getHeight() - 40, 1.2f, Color.RED, 1);
+        canvas.putText("Black: " + snapshot.blackScore(), 10, canvas.get().getHeight() - 20, 1.2f, Color.RED, 1);
     }
 
     private void drawGameOver(Img canvas, RenderSnapshot snapshot) {

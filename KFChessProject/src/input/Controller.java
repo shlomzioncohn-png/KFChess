@@ -32,6 +32,8 @@ public class Controller {
             if (board.getPieceAt(pos) != null && board.getPieceAt(pos).getColor() == board.getPieceAt(selectedPosition).getColor()) {
                 selectedPosition = pos;
             } else {
+                System.out.println("Attempting move from " + selectedPosition + " to " + pos);
+
                 engine.tryMove(selectedPosition, pos, currentClock);
                 selectedPosition = null; // מאפסים לאחר הניסיון
             }
@@ -44,7 +46,6 @@ public class Controller {
     public void handleJumpCommand(int x, int y, long currentClock) {
         Position pos = BoardMapper.mapPixelToPosition(x, y, board);
         if (pos != null && board.getPieceAt(pos) != null) {
-            System.out.println("Triggering Jump at: " + pos);
             engine.triggerJump(pos, currentClock);   // <-- זה השינוי - היה מוער בהערה
         }
     }

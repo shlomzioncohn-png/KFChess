@@ -5,6 +5,7 @@ import models.Board;
 import models.GameState;
 import models.Piece;
 import models.Position;
+import models.enums.PieceColor;
 import models.enums.PieceState;
 import realtime.Motion;
 import realtime.RealTimeArbiter;
@@ -36,11 +37,20 @@ public class SnapshotFactory {
                 ? gameState.getWinner().name()
                 : null;
 
+        List<String> fullLog = gameState.getMoveLog();
+        List<String> recentLog = fullLog.size() <= 5
+                ? fullLog
+                : fullLog.subList(fullLog.size() - 5, fullLog.size());
+
 
         return new RenderSnapshot(
                 board.getWidth(), board.getHeight(),
                 pieceSnapshots, selectedPosition,
-                gameState.isGameOver(), winnerText
+                gameState.isGameOver(), winnerText,
+                gameState.getScore(PieceColor.WHITE),
+                gameState.getScore(PieceColor.BLACK),
+                recentLog
+
         );
     }
 
