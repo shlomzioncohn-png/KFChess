@@ -30,6 +30,8 @@ public class Renderer {
                 snapshot.boardHeight() * cellSize
         );
         drawLegalMoves(canvas, snapshot);
+        drawRestingIndicators(canvas, snapshot);   // <-- חדש
+
 
         for (PieceRenderSnapshot piece : snapshot.pieces()) {
             Img pieceImage = imageLoader.getFrame(piece);
@@ -108,6 +110,27 @@ public class Renderer {
             int x = pos.getCol() * cellSize;
             int y = pos.getRow() * cellSize;
             canvas.fillRect(x, y, cellSize, cellSize, new Color(0, 200, 0, 90));
+        }
+    }
+
+    private void drawRestingIndicators(Img canvas, RenderSnapshot snapshot) {
+        for (PieceRenderSnapshot piece : snapshot.pieces()) {
+            if (!piece.stateFolder().equals("long_rest") && !piece.stateFolder().equals("short_rest")) {
+                continue;
+            }
+
+            long totalDuration = piece.stateFolder().equals("long_rest")
+                    ? engine.GameEngine.LONG_REST_DURATION
+                    : engine.GameEngine.SHORT_REST_DURATION;
+
+            double progress = Math.min(1.0, piece.stateElapsedMillis() / (double) totalDuration);
+            int alpha = (int) Math.round(180 * (1.0 - progress));   // 180 בהתחלה -> 0 בסוף
+            if (alpha <= 0) continue;
+
+            int x = (int) Math.round(piece.pixelX());
+            int y = (int) Math.round(piece.pixelY());
+
+            canvas.fillRect(x, y, cellSize, cellSize, new Color(255, 215, 0, alpha));
         }
     }
 }

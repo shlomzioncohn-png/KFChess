@@ -89,7 +89,6 @@ public class SnapshotFactory {
                 stateFolder = "move";
                 stateElapsedMillis = elapsed;
             } else {
-                // גיבוי: לא נמצאה תנועה תואמת (לא צפוי, אבל לא קורסים)
                 pixelX = piece.getCell().getCol() * cellSize;
                 pixelY = piece.getCell().getRow() * cellSize;
                 stateFolder = "idle";
@@ -99,13 +98,26 @@ public class SnapshotFactory {
             pixelX = piece.getCell().getCol() * cellSize;
             pixelY = piece.getCell().getRow() * cellSize;
 
-            if (piece.getState() == PieceState.JUMPING) {
-                stateFolder = "jump";
-                stateElapsedMillis = Math.max(0,
-                        GameEngine.JUMP_DURATION - (piece.getJumpExpiryTime() - currentClock));
-            } else {
-                stateFolder = "idle";
-                stateElapsedMillis = currentClock; // ל-idle בלולאה זה מספיק
+            switch (piece.getState()) {
+                case JUMPING -> {
+                    stateFolder = "jump";
+                    stateElapsedMillis = Math.max(0,
+                            GameEngine.JUMP_DURATION - (piece.getJumpExpiryTime() - currentClock));
+                }
+                case LONG_RESTING -> {                                          // <-- חדש
+                    stateFolder = "long_rest";
+                    stateElapsedMillis = Math.max(0,
+                            GameEngine.LONG_REST_DURATION - (piece.getRestExpiryTime() - currentClock));
+                }
+                case SHORT_RESTING -> {                                         // <-- חדש
+                    stateFolder = "short_rest";
+                    stateElapsedMillis = Math.max(0,
+                            GameEngine.SHORT_REST_DURATION - (piece.getRestExpiryTime() - currentClock));
+                }
+                default -> {
+                    stateFolder = "idle";
+                    stateElapsedMillis = currentClock;
+                }
             }
         }
 

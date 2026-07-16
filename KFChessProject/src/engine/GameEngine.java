@@ -17,13 +17,15 @@ import java.util.List;
 public class GameEngine {
 
     public static final long JUMP_DURATION = 1000;
+    public static final long LONG_REST_DURATION = 1000;   // קירור אחרי תזוזה רגילה
+    public static final long SHORT_REST_DURATION = 500;   // קירור אחרי קפיצה
 
     private final Board board;
     private final RealTimeArbiter arbiter;
     private final GameState gameState;
     private final List<Motion> activeMotions;
 
-    private long gameClockMs = 0;   // <-- חדש: השעון חי כאן, לא בחוץ
+    private long gameClockMs = 0;
 
     public GameEngine(Board board, RealTimeArbiter arbiter, GameState gameState) {
         this.board = board;
@@ -41,6 +43,7 @@ public class GameEngine {
         Piece piece = board.getPieceAt(src);
         if (piece == null) return;
         if (piece.getState() == PieceState.AIRBORNE) return;
+        if (isResting(piece)) return;                          // <-- חדש: חסימה בזמן-קירור
 
         MoveResult result = arbiter.validateMove(board, src, dest);
         if (result.isSuccess()) {
@@ -53,6 +56,9 @@ public class GameEngine {
     public void triggerJump(Position pos) {
         Piece piece = board.getPieceAt(pos);
         if (piece == null) return;
+        if (piece.getState() == PieceState.AIRBORNE) return;
+        if (isResting(piece)) return;                          // <-- חדש: חסימה בזמן-קירור
+
         piece.setState(PieceState.JUMPING);
         piece.setJumpExpiryTime(gameClockMs + JUMP_DURATION);
     }
@@ -60,6 +66,32 @@ public class GameEngine {
     public void waitMs(long deltaMs) {
         gameClockMs += deltaMs;
         activeMotions.removeIf(motion -> resolveMotion(motion, gameClockMs));
+        revertExpiredTemporaryStates();                         // <-- חדש: בדיקה תקופתית
+    }
+
+    private boolean isResting(Piece piece) {
+        boolean inRestState = piece.getState() == PieceState.LONG_RESTING
+                || piece.getState() == PieceState.SHORT_RESTING;
+        return inRestState && gameClockMs < piece.getRestExpiryTime();
+    }
+
+    private void revertExpiredTemporaryStates() {
+        for (int row = 0; row < board.getHeight(); row++) {
+            for (int col = 0; col < board.getWidth(); col++) {
+                Piece piece = board.getPieceAt(new Position(row, col));
+                if (piece == null) continue;
+
+                boolean resting = piece.getState() == PieceState.LONG_RESTING
+                        || piece.getState() == PieceState.SHORT_RESTING;
+                if (resting && gameClockMs >= piece.getRestExpiryTime()) {
+                    piece.setState(PieceState.IDLE);
+                }
+
+                if (piece.getState() == PieceState.JUMPING && !piece.isProtectedByJump(gameClockMs)) {
+                    piece.setState(PieceState.IDLE);
+                }
+            }
+        }
     }
 
     private boolean resolveMotion(Motion motion, long currentClock) {
@@ -95,7 +127,8 @@ public class GameEngine {
         }
 
         board.movePiece(src, dest);
-        movingPiece.setState(PieceState.IDLE);
+        movingPiece.setState(PieceState.LONG_RESTING);                        // <-- שונה מ-IDLE
+        movingPiece.setRestExpiryTime(currentClock + LONG_REST_DURATION);     // <-- חדש
 
         String logEntry = movingPiece.getColor() + " " + movingPiece.getType() + " " + src + " -> " + dest
                 + (target != null ? " (captured " + target.getType() + ")" : "");

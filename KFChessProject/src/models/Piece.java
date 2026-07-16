@@ -18,6 +18,8 @@ public class Piece {
 
     private long jumpExpiryTime; // 0 = אין הגנת קפיצה פעילה
 
+    private long restExpiryTime;
+
 
 
     public Piece(String id, PieceColor color, PieceType type, Position initialCell) {
@@ -77,6 +79,14 @@ public class Piece {
 
     public long getJumpExpiryTime() {
         return jumpExpiryTime;
+    }
+
+    public void setRestExpiryTime(long restExpiryTime) {
+        this.restExpiryTime = restExpiryTime;
+    }
+
+    public long getRestExpiryTime() {
+        return restExpiryTime;
     }
 
 
