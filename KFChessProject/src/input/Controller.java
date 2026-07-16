@@ -18,7 +18,7 @@ public class Controller {
     /**
      * פונקציה מרכזית לטיפול בכל לחיצה על הלוח.
      */
-    public void handleMouseClick(int x, int y, long currentClock) {
+    public void handleMouseClick(int x, int y) {
         Position pos = BoardMapper.mapPixelToPosition(x, y, board);
         if (pos == null) return; // לחיצה מחוץ ללוח
 
@@ -34,7 +34,7 @@ public class Controller {
             } else {
                 System.out.println("Attempting move from " + selectedPosition + " to " + pos);
 
-                engine.tryMove(selectedPosition, pos, currentClock);
+                engine.tryMove(selectedPosition, pos);
                 selectedPosition = null; // מאפסים לאחר הניסיון
             }
         }
@@ -43,15 +43,15 @@ public class Controller {
     /**
      * לוגיקת הקפיצה (Jump) - מוכנה להטמעה!
      */
-    public void handleJumpCommand(int x, int y, long currentClock) {
+    public void handleJumpCommand(int x, int y) {
         Position pos = BoardMapper.mapPixelToPosition(x, y, board);
         if (pos != null && board.getPieceAt(pos) != null) {
-            engine.triggerJump(pos, currentClock);   // <-- זה השינוי - היה מוער בהערה
+            engine.triggerJump(pos);
         }
     }
 
-    public void update(long currentClock) {
-        engine.update(currentClock);
+    public void update(long deltaMs) {
+        engine.waitMs(deltaMs);
     }
 
     public Position getSelectedPosition() {

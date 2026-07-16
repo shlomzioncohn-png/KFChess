@@ -18,11 +18,11 @@ public class SnapshotFactory {
     public static RenderSnapshot build(Board board, GameEngine engine,
                                        RealTimeArbiter arbiter,
                                        Position selectedPosition,
-                                       int cellSize, long currentClock,
+                                       int cellSize,
                                        GameState gameState,
                                        String whiteName,
                                        String blackName) {
-
+        long currentClock = engine.getGameClockMs();
         List<PieceRenderSnapshot> pieceSnapshots = new ArrayList<>();
         List<Motion> activeMotions = engine.getActiveMotions();
 

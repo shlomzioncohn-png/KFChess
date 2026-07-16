@@ -84,8 +84,19 @@ public class Renderer {
     }
 
     private void drawGameOver(Img canvas, RenderSnapshot snapshot) {
-        String text = snapshot.winner() == null ? "Game Over" : snapshot.winner() + " wins";
-        canvas.putText(text, 40, 60, 2.0f, Color.RED, 2);
+        String text = snapshot.winner() == null ? "GAME OVER" : snapshot.winner() + " WINS!";
+
+        int boardPixelWidth = snapshot.boardWidth() * cellSize;
+        int boardPixelHeight = snapshot.boardHeight() * cellSize;
+
+        canvas.fillRect(0, boardPixelHeight / 2 - 60, boardPixelWidth, 120,
+                new java.awt.Color(0, 0, 0, 160));
+
+        int approxTextWidth = text.length() * 34;
+        int x = Math.max(10, (boardPixelWidth - approxTextWidth) / 2);
+        int y = boardPixelHeight / 2 + 15;
+
+        canvas.putText(text, x, y, 4.5f, Color.RED, 4);
     }
 
     public void setOnClick(ClickListener listener) {

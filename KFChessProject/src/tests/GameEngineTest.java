@@ -1,3 +1,5 @@
+package tests;
+
 import engine.GameEngine;
 import models.Board;
 import models.GameState;
@@ -28,7 +30,7 @@ public class GameEngineTest {
         board.addPiece(p1, rook);
         GameEngine engine = newEngine(board, state);
 
-        engine.tryMove(p1, new Position(4, 5), 0L);
+        engine.tryMove(p1, new Position(4, 5));
 
         assertEquals(PieceState.IDLE, rook.getState(), "כאשר המשחק הסתיים, לא אמור להתבצע כל שינוי במצב הכלי");
         assertEquals(rook, board.getPieceAt(p1), "הכלי חייב להישאר במקומו כאשר המשחק הסתיים");
@@ -40,7 +42,7 @@ public class GameEngineTest {
         GameState state = new GameState();
         GameEngine engine = newEngine(board, state);
 
-        assertDoesNotThrow(() -> engine.tryMove(new Position(0, 0), new Position(1, 1), 0L),
+        assertDoesNotThrow(() -> engine.tryMove(new Position(0, 0), new Position(1, 1)),
                 "ניסיון להזיז מתא ריק אינו אמור לזרוק שגיאה");
     }
 
@@ -54,8 +56,8 @@ public class GameEngineTest {
         board.addPiece(p1, rook);
         GameEngine engine = newEngine(board, state);
 
-        engine.tryMove(p1, new Position(4, 5), 0L);
-        engine.update(5000L);
+        engine.tryMove(p1, new Position(4, 5));
+        engine.waitMs(5000L);
 
         assertEquals(rook, board.getPieceAt(p1), "כלי שכבר באוויר אינו אמור להתחיל מהלך חדש");
         assertEquals(PieceState.AIRBORNE, rook.getState(), "מצב הכלי חייב להישאר AIRBORNE");
@@ -70,7 +72,7 @@ public class GameEngineTest {
         board.addPiece(src, rook);
         GameEngine engine = newEngine(board, state);
 
-        engine.tryMove(src, new Position(4, 5), 0L);
+        engine.tryMove(src, new Position(4, 5));
 
         assertEquals(PieceState.AIRBORNE, rook.getState(), "מהלך חוקי חייב להעביר את הכלי מיידית למצב AIRBORNE");
         assertEquals(rook, board.getPieceAt(src), "לפני שהזמן חלף, הכלי עדיין אמור להופיע במשבצת המקורית");
@@ -85,8 +87,8 @@ public class GameEngineTest {
         board.addPiece(src, rook);
         GameEngine engine = newEngine(board, state);
 
-        engine.tryMove(src, new Position(6, 6), 0L); // אלכסון - לא חוקי לצריח
-        engine.update(10000L);
+        engine.tryMove(src, new Position(6, 6)); // אלכסון - לא חוקי לצריח
+        engine.waitMs(10000L);
 
         assertEquals(PieceState.IDLE, rook.getState(), "מהלך לא חוקי אסור שישנה את מצב הכלי");
         assertEquals(rook, board.getPieceAt(src), "מהלך לא חוקי אסור שיזיז את הכלי");
@@ -102,9 +104,9 @@ public class GameEngineTest {
         board.addPiece(src, rook);
         GameEngine engine = newEngine(board, state);
 
-        engine.tryMove(src, dest, 0L); // מרחק 1 -> זמן נסיעה 1000
+        engine.tryMove(src, dest); // מרחק 1 -> זמן נסיעה 1000
 
-        engine.update(500L);
+        engine.waitMs(500L);
 
         assertEquals(rook, board.getPieceAt(src), "לפני שהגיע זמן היעד, הכלי לא אמור לזוז עדיין");
         assertNull(board.getPieceAt(dest), "לפני שהגיע זמן היעד, משבצת היעד אמורה להישאר ריקה");
@@ -121,8 +123,8 @@ public class GameEngineTest {
         board.addPiece(src, rook);
         GameEngine engine = newEngine(board, state);
 
-        engine.tryMove(src, dest, 0L);
-        engine.update(1000L);
+        engine.tryMove(src, dest);
+        engine.waitMs(1000L);
 
         assertNull(board.getPieceAt(src), "אחרי שהגיע זמן היעד, המשבצת המקורית חייבת להתרוקן");
         assertEquals(rook, board.getPieceAt(dest), "אחרי שהגיע זמן היעד, הכלי חייב להופיע במשבצת היעד");
@@ -141,8 +143,8 @@ public class GameEngineTest {
         board.addPiece(dest, enemyPawn);
         GameEngine engine = newEngine(board, state);
 
-        engine.tryMove(src, dest, 0L);
-        engine.update(1000L);
+        engine.tryMove(src, dest);
+        engine.waitMs(1000L);
 
         assertEquals(rook, board.getPieceAt(dest), "אחרי לכידה, התוקף חייב להופיע במשבצת היעד");
         assertFalse(state.isGameOver(), "לכידת כלי שאינו מלך אינה אמורה לסיים את המשחק");
@@ -160,8 +162,8 @@ public class GameEngineTest {
         board.addPiece(dest, enemyKing);
         GameEngine engine = newEngine(board, state);
 
-        engine.tryMove(src, dest, 0L);
-        engine.update(1000L);
+        engine.tryMove(src, dest);
+        engine.waitMs(1000L);
 
         assertTrue(state.isGameOver(), "לכידת מלך חייבת לסיים את המשחק");
         assertEquals(PieceColor.WHITE, state.getWinner(), "המנצח חייב להיות הצבע שביצע את הלכידה");
@@ -176,7 +178,8 @@ public class GameEngineTest {
         board.addPiece(pos, pawn);
         GameEngine engine = newEngine(board, state);
 
-        engine.triggerJump(pos, 1000L);
+        engine.waitMs(1000L);   // מקדמים את שעון-המנוע ל-1000 לפני הפעלת הקפיצה
+        engine.triggerJump(pos);
 
         assertEquals(PieceState.JUMPING, pawn.getState(), "לאחר triggerJump, מצב הכלי חייב להיות JUMPING");
         assertTrue(pawn.isProtectedByJump(1999L), "הכלי חייב להיות מוגן לפני תום 1000 המילישניות");
@@ -193,7 +196,7 @@ public class GameEngineTest {
         board.addPiece(pos, pawn);
         GameEngine engine = newEngine(board, state);
 
-        engine.triggerJump(pos, 1000L);
+        engine.triggerJump(pos);
 
         assertEquals(PieceState.IDLE, pawn.getState(), "כאשר המשחק הסתיים, triggerJump אסור שישנה את מצב הכלי");
     }
@@ -208,7 +211,7 @@ public class GameEngineTest {
         board.addPiece(pos, pawn);
         GameEngine engine = newEngine(board, state);
 
-        engine.triggerJump(pos, 1000L);
+        engine.triggerJump(pos);
 
         assertEquals(PieceState.AIRBORNE, pawn.getState(), "כלי שנמצא כבר באוויר אינו אמור לעבור למצב JUMPING");
     }
@@ -227,8 +230,8 @@ public class GameEngineTest {
         board.addPiece(dest, defender);
         GameEngine engine = newEngine(board, state);
 
-        engine.tryMove(src, dest, 0L); // זמן הגעה = 1000, עדיין לפני תום ההגנה (5000)
-        engine.update(1000L);
+        engine.tryMove(src, dest); // זמן הגעה = 1000, עדיין לפני תום ההגנה (5000)
+        engine.waitMs(1000L);
 
         assertNull(board.getPieceAt(src), "התוקף חייב להיעלם מהמשבצת המקורית אחרי שנתפס באוויר");
         assertEquals(defender, board.getPieceAt(dest), "המגן המוגן על ידי קפיצה חייב להישאר במקומו");
@@ -246,8 +249,8 @@ public class GameEngineTest {
         board.addPiece(src, pawn);
         GameEngine engine = newEngine(board, state);
 
-        engine.tryMove(src, dest, 0L);
-        engine.update(1000L);
+        engine.tryMove(src, dest);
+        engine.waitMs(1000L);
 
         assertEquals(PieceType.QUEEN, pawn.getType(), "רגלי שמגיע לשורה האחרונה חייב להיות מוכתר למלכה");
     }
