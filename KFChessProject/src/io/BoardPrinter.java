@@ -27,7 +27,6 @@ public class BoardPrinter {
                 } else {
                     String colorChar = piece.getColor().name().substring(0, 1).toLowerCase();
 
-                    // תיקון הלוגיקה: שימוש ב-switch במקום substring כדי למנוע בלבול בין Knight ל-King
                     String kindChar;
                     PieceType type = piece.getType();
                     if (type == PieceType.KING)   kindChar = "K";

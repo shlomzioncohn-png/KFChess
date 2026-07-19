@@ -1,5 +1,6 @@
 package view;
 
+//מדווחת קליקים-לא יודעת שחמט, מציגה
 import javax.swing.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;

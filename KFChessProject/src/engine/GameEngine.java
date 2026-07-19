@@ -43,7 +43,7 @@ public class GameEngine {
         Piece piece = board.getPieceAt(src);
         if (piece == null) return;
         if (piece.getState() == PieceState.AIRBORNE) return;
-        if (isResting(piece)) return;                          // <-- חדש: חסימה בזמן-קירור
+        if (isResting(piece)) return;
 
         MoveResult result = arbiter.validateMove(board, src, dest);
         if (result.isSuccess()) {
@@ -57,8 +57,7 @@ public class GameEngine {
         Piece piece = board.getPieceAt(pos);
         if (piece == null) return;
         if (piece.getState() == PieceState.AIRBORNE) return;
-        if (isResting(piece)) return;                          // <-- חדש: חסימה בזמן-קירור
-
+        if (isResting(piece)) return;
         piece.setState(PieceState.JUMPING);
         piece.setJumpExpiryTime(gameClockMs + JUMP_DURATION);
     }
@@ -66,7 +65,7 @@ public class GameEngine {
     public void waitMs(long deltaMs) {
         gameClockMs += deltaMs;
         activeMotions.removeIf(motion -> resolveMotion(motion, gameClockMs));
-        revertExpiredTemporaryStates();                         // <-- חדש: בדיקה תקופתית
+        revertExpiredTemporaryStates();
     }
 
     private boolean isResting(Piece piece) {
@@ -127,8 +126,8 @@ public class GameEngine {
         }
 
         board.movePiece(src, dest);
-        movingPiece.setState(PieceState.LONG_RESTING);                        // <-- שונה מ-IDLE
-        movingPiece.setRestExpiryTime(currentClock + LONG_REST_DURATION);     // <-- חדש
+        movingPiece.setState(PieceState.LONG_RESTING);
+        movingPiece.setRestExpiryTime(currentClock + LONG_REST_DURATION);
 
         String logEntry = movingPiece.getColor() + " " + movingPiece.getType() + " " + src + " -> " + dest
                 + (target != null ? " (captured " + target.getType() + ")" : "");

@@ -30,12 +30,14 @@ public class RuleEngine {
         return rule.isValidMove(board, from, to);
     }
 
+
+
     public List<Position> getLegalDestinations(Board board, Position source) {
         List<Position> legal = new ArrayList<>();
         for (int row = 0; row < board.getHeight(); row++) {
             for (int col = 0; col < board.getWidth(); col++) {
                 Position candidate = new Position(row, col);
-                if (validateMove(board, source, candidate)) {   // <-- רק זה, בלי isValid()/.()
+                if (validateMove(board, source, candidate)) {
                     legal.add(candidate);
                 }
             }

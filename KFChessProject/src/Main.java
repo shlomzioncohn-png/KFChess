@@ -46,13 +46,13 @@ public class Main {
         GameClickHandler clickHandler;
 
         try {
-            board = BoardParser.parse(STARTING_BOARD);   // <-- לוח מוכן, לא מהקונסולה!
+            board = BoardParser.parse(STARTING_BOARD);
             arbiter = new RealTimeArbiter();
             gameState = new GameState();
             engine = new GameEngine(board, arbiter, gameState);
             controller = new Controller(engine, board);
 
-            renderer = new Renderer("resources/pieces_classic", CELL_SIZE);
+            renderer = new Renderer("resources/pieces_mine", CELL_SIZE);
             renderer.initWindow(board.getWidth(), board.getHeight());
 
             frameRenderer = () -> {
