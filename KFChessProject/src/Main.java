@@ -1,3 +1,4 @@
+import bus.GameBootstrapper;
 import engine.GameEngine;
 import io.BoardParser;
 import io.BoardPrinter;
@@ -49,7 +50,8 @@ public class Main {
             board = BoardParser.parse(STARTING_BOARD);
             arbiter = new RealTimeArbiter();
             gameState = new GameState();
-            engine = new GameEngine(board, arbiter, gameState);
+            engine = engine = GameBootstrapper.buildEngine(board, arbiter, gameState);
+
             controller = new Controller(engine, board);
 
             renderer = new Renderer("resources/pieces_mine", CELL_SIZE);

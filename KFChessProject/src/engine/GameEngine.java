@@ -1,5 +1,9 @@
 package engine;
 
+import bus.EventBus;
+import bus.events.CaptureEvent;
+import bus.events.GameOverEvent;
+import bus.events.MoveEvent;
 import models.Board;
 import models.GameState;
 import models.Piece;
@@ -24,13 +28,16 @@ public class GameEngine {
     private final RealTimeArbiter arbiter;
     private final GameState gameState;
     private final List<Motion> activeMotions;
+    private final EventBus bus;
+
 
     private long gameClockMs = 0;
 
-    public GameEngine(Board board, RealTimeArbiter arbiter, GameState gameState) {
+    public GameEngine(Board board, RealTimeArbiter arbiter, GameState gameState, EventBus bus) {
         this.board = board;
         this.arbiter = arbiter;
         this.gameState = gameState;
+        this.bus = bus;
         this.activeMotions = new ArrayList<>();
     }
 
@@ -117,10 +124,11 @@ public class GameEngine {
         }
 
         if (target != null) {
-            gameState.addScore(movingPiece.getColor(), PieceValue.getValue(target.getType()));
+            bus.publish("piece.captured", new CaptureEvent(movingPiece, target, src, dest));
             if (WinCondition.isDecisive(target)) {
                 gameState.setGameOver(true);
                 gameState.setWinner(movingPiece.getColor());
+                bus.publish("game.over", new GameOverEvent(movingPiece.getColor()));
             }
             board.removePiece(dest);
         }
@@ -129,9 +137,8 @@ public class GameEngine {
         movingPiece.setState(PieceState.LONG_RESTING);
         movingPiece.setRestExpiryTime(currentClock + LONG_REST_DURATION);
 
-        String logEntry = movingPiece.getColor() + " " + movingPiece.getType() + " " + src + " -> " + dest
-                + (target != null ? " (captured " + target.getType() + ")" : "");
-        gameState.addLogEntry(logEntry);
+        bus.publish("move.completed", new MoveEvent(movingPiece, src, dest, target != null));
+
 
         if (PromotionRule.isEligible(board, movingPiece, dest)) {
             movingPiece.promote(PromotionRule.promotedType());
