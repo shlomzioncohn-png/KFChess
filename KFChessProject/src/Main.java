@@ -11,14 +11,14 @@ import view.FrameRenderer;
 import view.Renderer;
 import view.RenderSnapshot;
 import view.SnapshotFactory;
-
 import javax.swing.Timer;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 public class Main {
-
     private static final int CELL_SIZE = 100;
     private static final String WHITE_NAME = "Player White";
     private static final String BLACK_NAME = "Player Black";
@@ -50,10 +50,11 @@ public class Main {
             board = BoardParser.parse(STARTING_BOARD);
             arbiter = new RealTimeArbiter();
             gameState = new GameState();
-            engine = engine = GameBootstrapper.buildEngine(board, arbiter, gameState);
+            engine = GameBootstrapper.buildEngine(board, arbiter, gameState);
 
-            controller = new Controller(engine, board);
-
+            client.GameClient wsClient = new client.GameClient(new java.net.URI("ws://localhost:8887"), engine);
+            wsClient.connect();
+            controller = new Controller(engine, board, wsClient);
             renderer = new Renderer("resources/pieces_mine", CELL_SIZE);
             renderer.initWindow(board.getWidth(), board.getHeight());
 
@@ -66,9 +67,12 @@ public class Main {
 
             frameRenderer.renderNow();
 
+
         } catch (IllegalArgumentException e) {
             System.out.println("ERROR " + e.getMessage());
             return;
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
         }
 
         if (!OBSERVER_MODE) {

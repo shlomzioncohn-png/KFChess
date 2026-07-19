@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class GameEngineTest {
 
     private GameEngine newEngine(Board board, GameState gameState) {
-        return new GameEngine(board, new RealTimeArbiter(), gameState);
+        return new GameEngine(board, new RealTimeArbiter(), gameState, new bus.EventBus());
     }
 
     @Test

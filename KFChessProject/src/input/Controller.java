@@ -1,18 +1,25 @@
 package input;
 
+import client.CommandBuilder;
+import client.GameClient;
 import engine.GameEngine;
 import models.Board;
+import models.Piece;
 import models.Position;
 
 public class Controller {
     private final GameEngine engine;
     private final Board board;
+    private final GameClient client;
+
 
     private Position selectedPosition = null;
 
-    public Controller(GameEngine engine, Board board) {
+    public Controller(GameEngine engine, Board board , client.GameClient client) {
         this.engine = engine;
         this.board = board;
+        this.client = client;
+
     }
 
     /**
@@ -33,9 +40,10 @@ public class Controller {
                 selectedPosition = pos;
             } else {
                 System.out.println("Attempting move from " + selectedPosition + " to " + pos);
-
-                engine.tryMove(selectedPosition, pos);
-                selectedPosition = null; // מאפסים לאחר הניסיון
+                Piece movingPiece = board.getPieceAt(selectedPosition);
+                String command = CommandBuilder.buildMoveCommand(movingPiece, selectedPosition, pos, board.getHeight());
+                client.send(command);
+                selectedPosition = null;
             }
         }
     }

@@ -150,4 +150,9 @@ public class GameEngine {
     public List<Motion> getActiveMotions() {
         return List.copyOf(activeMotions);
     }
+
+    public EventBus getBus() {
+        return bus;
+    }
+
 }
