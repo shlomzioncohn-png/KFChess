@@ -15,7 +15,6 @@ import javax.swing.Timer;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URI;
 import java.net.URISyntaxException;
 
 public class Main {
@@ -35,7 +34,7 @@ public class Main {
                     "wP wP wP wP wP wP wP wP\n" +
                     "wR wN wB wK wQ wB wN wR";
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
 
         Board board;
         RealTimeArbiter arbiter;
@@ -52,8 +51,18 @@ public class Main {
             gameState = new GameState();
             engine = GameBootstrapper.buildEngine(board, arbiter, gameState);
 
+            java.io.BufferedReader loginReader = new java.io.BufferedReader(new java.io.InputStreamReader(System.in));
+
+            System.out.print("Enter your username: ");
+            String username = loginReader.readLine();
+
+            System.out.print("Enter your password: ");
+            String password = loginReader.readLine();
+
             client.GameClient wsClient = new client.GameClient(new java.net.URI("ws://localhost:8887"), engine);
-            wsClient.connect();
+            wsClient.connectBlocking();
+            wsClient.send("LOGIN " + username + " " + password);
+
             controller = new Controller(engine, board, wsClient);
             renderer = new Renderer("resources/pieces_mine", CELL_SIZE);
             renderer.initWindow(board.getWidth(), board.getHeight());
@@ -66,7 +75,6 @@ public class Main {
             };
 
             frameRenderer.renderNow();
-
 
         } catch (IllegalArgumentException e) {
             System.out.println("ERROR " + e.getMessage());

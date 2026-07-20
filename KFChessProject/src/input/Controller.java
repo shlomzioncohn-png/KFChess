@@ -19,7 +19,6 @@ public class Controller {
         this.engine = engine;
         this.board = board;
         this.client = client;
-
     }
 
     /**
@@ -42,7 +41,11 @@ public class Controller {
                 System.out.println("Attempting move from " + selectedPosition + " to " + pos);
                 Piece movingPiece = board.getPieceAt(selectedPosition);
                 String command = CommandBuilder.buildMoveCommand(movingPiece, selectedPosition, pos, board.getHeight());
-                client.send(command);
+                try {
+                    client.send(command);
+                } catch (Exception e) {
+                    System.out.println("[CLIENT] could not send move - not connected to server");
+                }
                 selectedPosition = null;
             }
         }
