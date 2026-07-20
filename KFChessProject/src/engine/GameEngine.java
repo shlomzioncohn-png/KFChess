@@ -3,6 +3,7 @@ package engine;
 import bus.EventBus;
 import bus.events.CaptureEvent;
 import bus.events.GameOverEvent;
+import bus.events.JumpEvent;
 import bus.events.MoveEvent;
 import models.Board;
 import models.GameState;
@@ -11,7 +12,6 @@ import models.Position;
 import models.enums.PieceState;
 import realtime.Motion;
 import realtime.RealTimeArbiter;
-import rules.PieceValue;
 import rules.PromotionRule;
 import rules.WinCondition;
 
@@ -21,15 +21,14 @@ import java.util.List;
 public class GameEngine {
 
     public static final long JUMP_DURATION = 1000;
-    public static final long LONG_REST_DURATION = 1000;   // קירור אחרי תזוזה רגילה
-    public static final long SHORT_REST_DURATION = 500;   // קירור אחרי קפיצה
+    public static final long LONG_REST_DURATION = 1000;
+    public static final long SHORT_REST_DURATION = 500;
 
     private final Board board;
     private final RealTimeArbiter arbiter;
     private final GameState gameState;
     private final List<Motion> activeMotions;
     private final EventBus bus;
-
 
     private long gameClockMs = 0;
 
@@ -67,6 +66,7 @@ public class GameEngine {
         if (isResting(piece)) return;
         piece.setState(PieceState.JUMPING);
         piece.setJumpExpiryTime(gameClockMs + JUMP_DURATION);
+        bus.publish("piece.jumped", new JumpEvent(pos));
     }
 
     public void waitMs(long deltaMs) {
@@ -94,7 +94,9 @@ public class GameEngine {
                 }
 
                 if (piece.getState() == PieceState.JUMPING && !piece.isProtectedByJump(gameClockMs)) {
-                    piece.setState(PieceState.IDLE);
+                    // אחרי שהגנת-הקפיצה פגה - קירור-קצר, לא ישר IDLE
+                    piece.setState(PieceState.SHORT_RESTING);
+                    piece.setRestExpiryTime(gameClockMs + SHORT_REST_DURATION);
                 }
             }
         }
@@ -138,7 +140,6 @@ public class GameEngine {
         movingPiece.setRestExpiryTime(currentClock + LONG_REST_DURATION);
 
         bus.publish("move.completed", new MoveEvent(movingPiece, src, dest, target != null));
-
 
         if (PromotionRule.isEligible(board, movingPiece, dest)) {
             movingPiece.promote(PromotionRule.promotedType());

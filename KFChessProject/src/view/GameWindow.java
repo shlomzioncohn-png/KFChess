@@ -1,6 +1,5 @@
 package view;
 
-//מדווחת קליקים-לא יודעת שחמט, מציגה
 import javax.swing.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -10,6 +9,7 @@ public class GameWindow {
     private JFrame frame;
     private JLabel imageLabel;
     private ClickListener clickListener;
+    private ClickListener rightClickListener;
 
     public void open(Img initialImage) {
         SwingUtilities.invokeLater(() -> {
@@ -17,8 +17,14 @@ public class GameWindow {
             imageLabel.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    if (clickListener != null) {
-                        clickListener.onClick(e.getX(), e.getY());
+                    if (e.getButton() == MouseEvent.BUTTON3) {
+                        if (rightClickListener != null) {
+                            rightClickListener.onClick(e.getX(), e.getY());
+                        }
+                    } else {
+                        if (clickListener != null) {
+                            clickListener.onClick(e.getX(), e.getY());
+                        }
                     }
                 }
             });
@@ -41,5 +47,9 @@ public class GameWindow {
 
     public void setClickListener(ClickListener listener) {
         this.clickListener = listener;
+    }
+
+    public void setRightClickListener(ClickListener listener) {
+        this.rightClickListener = listener;
     }
 }

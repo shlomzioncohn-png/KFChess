@@ -1,4 +1,5 @@
 import bus.GameBootstrapper;
+import client.GameClient;
 import engine.GameEngine;
 import io.BoardParser;
 import io.BoardPrinter;
@@ -51,7 +52,7 @@ public class Main {
             gameState = new GameState();
             engine = GameBootstrapper.buildEngine(board, arbiter, gameState);
 
-            java.io.BufferedReader loginReader = new java.io.BufferedReader(new java.io.InputStreamReader(System.in));
+            BufferedReader loginReader = new java.io.BufferedReader(new InputStreamReader(System.in));
 
             System.out.print("Enter your username: ");
             String username = loginReader.readLine();
@@ -59,12 +60,12 @@ public class Main {
             System.out.print("Enter your password: ");
             String password = loginReader.readLine();
 
-            client.GameClient wsClient = new client.GameClient(new java.net.URI("ws://localhost:8887"), engine);
+            GameClient wsClient = new GameClient(new java.net.URI("ws://localhost:8887"), engine);
             wsClient.connectBlocking();
             wsClient.send("LOGIN " + username + " " + password);
 
             controller = new Controller(engine, board, wsClient);
-            renderer = new Renderer("resources/pieces_mine", CELL_SIZE);
+            renderer = new Renderer("resources/pieces_classic", CELL_SIZE);
             renderer.initWindow(board.getWidth(), board.getHeight());
 
             frameRenderer = () -> {
@@ -86,6 +87,9 @@ public class Main {
         if (!OBSERVER_MODE) {
             clickHandler = new GameClickHandler(controller, frameRenderer);
             renderer.setOnClick(clickHandler);
+
+            input.JumpClickHandler jumpClickHandler = new input.JumpClickHandler(controller, frameRenderer);
+            renderer.setOnRightClick(jumpClickHandler);
         } else {
             clickHandler = null;
         }

@@ -7,7 +7,7 @@ import java.awt.Dimension;
 
 public class Renderer {
 
-    private static final String BOARD_IMAGE_PATH = "resources/board.png";
+    private static final String BOARD_IMAGE_PATH = "resources/board_classic.png";
     private static final int SIDEBAR_WIDTH = 250;
 
     private final GameWindow gameWindow = new GameWindow();
@@ -132,5 +132,9 @@ public class Renderer {
 
             canvas.fillRect(x, y, cellSize, cellSize, new Color(255, 215, 0, alpha));
         }
+    }
+
+    public void setOnRightClick(ClickListener listener) {
+        gameWindow.setRightClickListener(listener);
     }
 }

@@ -56,8 +56,16 @@ public class Controller {
      */
     public void handleJumpCommand(int x, int y) {
         Position pos = BoardMapper.mapPixelToPosition(x, y, board);
-        if (pos != null && board.getPieceAt(pos) != null) {
-            engine.triggerJump(pos);
+        if (pos == null) return;
+
+        Piece piece = board.getPieceAt(pos);
+        if (piece == null) return;
+
+        String command = CommandBuilder.buildJumpCommand(piece, pos, board.getHeight());
+        try {
+            client.send(command);
+        } catch (Exception e) {
+            System.out.println("[CLIENT] could not send jump - not connected to server");
         }
     }
 

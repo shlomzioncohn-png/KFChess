@@ -15,6 +15,8 @@ import java.util.List;
 
 public class SnapshotFactory {
 
+    private static final double JUMP_HEIGHT_PX = 40.0;
+
     public static RenderSnapshot build(Board board, GameEngine engine,
                                        RealTimeArbiter arbiter,
                                        Position selectedPosition,
@@ -44,7 +46,6 @@ public class SnapshotFactory {
                 ? fullLog
                 : fullLog.subList(fullLog.size() - 5, fullLog.size());
 
-
         List<Position> legalMoves = selectedPosition != null
                 ? new rules.RuleEngine().getLegalDestinations(board, selectedPosition)
                 : List.of();
@@ -59,7 +60,6 @@ public class SnapshotFactory {
                 whiteName,
                 blackName,
                 legalMoves
-
         );
     }
 
@@ -103,13 +103,17 @@ public class SnapshotFactory {
                     stateFolder = "jump";
                     stateElapsedMillis = Math.max(0,
                             GameEngine.JUMP_DURATION - (piece.getJumpExpiryTime() - currentClock));
+
+                    double jumpProgress = Math.min(1.0, stateElapsedMillis / (double) GameEngine.JUMP_DURATION);
+                    double jumpOffset = -JUMP_HEIGHT_PX * 4 * jumpProgress * (1 - jumpProgress);
+                    pixelY = pixelY + jumpOffset;
                 }
-                case LONG_RESTING -> {                                          // <-- חדש
+                case LONG_RESTING -> {
                     stateFolder = "long_rest";
                     stateElapsedMillis = Math.max(0,
                             GameEngine.LONG_REST_DURATION - (piece.getRestExpiryTime() - currentClock));
                 }
-                case SHORT_RESTING -> {                                         // <-- חדש
+                case SHORT_RESTING -> {
                     stateFolder = "short_rest";
                     stateElapsedMillis = Math.max(0,
                             GameEngine.SHORT_REST_DURATION - (piece.getRestExpiryTime() - currentClock));
