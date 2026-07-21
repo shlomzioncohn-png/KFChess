@@ -125,13 +125,10 @@ public class GameEngine {
             return true;
         }
 
+        boolean decisiveCapture = false;
         if (target != null) {
             bus.publish("piece.captured", new CaptureEvent(movingPiece, target, src, dest));
-            if (WinCondition.isDecisive(target)) {
-                gameState.setGameOver(true);
-                gameState.setWinner(movingPiece.getColor());
-                bus.publish("game.over", new GameOverEvent(movingPiece.getColor()));
-            }
+            decisiveCapture = WinCondition.isDecisive(target);
             board.removePiece(dest);
         }
 
@@ -143,6 +140,12 @@ public class GameEngine {
 
         if (PromotionRule.isEligible(board, movingPiece, dest)) {
             movingPiece.promote(PromotionRule.promotedType());
+        }
+
+        if (decisiveCapture) {
+            gameState.setGameOver(true);
+            gameState.setWinner(movingPiece.getColor());
+            bus.publish("game.over", new GameOverEvent(movingPiece.getColor()));
         }
 
         return true;

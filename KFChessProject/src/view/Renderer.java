@@ -42,6 +42,10 @@ public class Renderer {
         drawScore(canvas, snapshot);
         drawMoveLog(canvas, snapshot);
 
+        if (snapshot.disconnectSecondsLeft() != null) {
+            drawDisconnectCountdown(canvas, snapshot);
+        }
+
         if (snapshot.gameOver()) {
             drawGameOver(canvas, snapshot);
         }
@@ -85,8 +89,45 @@ public class Renderer {
         }
     }
 
+    private void drawDisconnectCountdown(Img canvas, RenderSnapshot snapshot) {
+        String text = "Opponent disconnected - auto-resign in " + snapshot.disconnectSecondsLeft() + "s";
+
+        int boardPixelWidth = snapshot.boardWidth() * cellSize;
+        int boardPixelHeight = snapshot.boardHeight() * cellSize;
+
+        int overlayHeight = 90;
+        int overlayY = boardPixelHeight / 2 - overlayHeight / 2;
+        canvas.fillRect(0, overlayY, boardPixelWidth, overlayHeight, new Color(0, 0, 0, 160));
+
+        float textScale = 1.6f;
+        int approxTextWidth = (int) (text.length() * 7.5f * textScale);
+        int textX = Math.max(10, (boardPixelWidth - approxTextWidth) / 2);
+        int textY = overlayY + 35;
+        canvas.putText(text, textX, textY, textScale, Color.ORANGE, 2);
+
+        int barX = 40;
+        int barY = overlayY + 55;
+        int barWidth = boardPixelWidth - 80;
+        int barHeight = 18;
+
+        canvas.drawRect(barX, barY, barWidth, barHeight, Color.WHITE, 2);
+
+        double fraction = 0.0;
+        Integer total = snapshot.disconnectTotalSeconds();
+        if (total != null && total > 0) {
+            fraction = Math.max(0.0, Math.min(1.0, snapshot.disconnectSecondsLeft() / (double) total));
+        }
+        int filledWidth = (int) Math.round((barWidth - 4) * fraction);
+        if (filledWidth > 0) {
+            canvas.fillRect(barX + 2, barY + 2, filledWidth, barHeight - 4, new Color(255, 90, 0, 220));
+        }
+    }
+
     private void drawGameOver(Img canvas, RenderSnapshot snapshot) {
         String text = snapshot.winner() == null ? "GAME OVER" : snapshot.winner() + " WINS!";
+        if (snapshot.returnCountdownSecondsLeft() != null) {
+            text += " - Returning to matchmaking in " + snapshot.returnCountdownSecondsLeft() + "s";
+        }
 
         int boardPixelWidth = snapshot.boardWidth() * cellSize;
         int boardPixelHeight = snapshot.boardHeight() * cellSize;

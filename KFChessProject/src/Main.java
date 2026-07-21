@@ -11,12 +11,14 @@ import input.GameClickHandler;
 import view.FrameRenderer;
 import view.Renderer;
 import view.RenderSnapshot;
+import view.SearchingDialog;
 import view.SnapshotFactory;
 import javax.swing.Timer;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URISyntaxException;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Main {
     private static final int CELL_SIZE = 100;
@@ -35,24 +37,19 @@ public class Main {
                     "wP wP wP wP wP wP wP wP\n" +
                     "wR wN wB wK wQ wB wN wR";
 
+    // מצב הסיבוב הנוכחי - מוחלף בכל startRound(), נקרא מה-Timer (EDT) וממתודות אחרות
+    private static final AtomicReference<Board> boardRef = new AtomicReference<>();
+    private static final AtomicReference<GameState> gameStateRef = new AtomicReference<>();
+    private static final AtomicReference<Controller> controllerRef = new AtomicReference<>();
+    private static final AtomicReference<FrameRenderer> frameRendererRef = new AtomicReference<>();
+
     public static void main(String[] args) throws IOException, InterruptedException {
 
-        Board board;
-        RealTimeArbiter arbiter;
-        GameState gameState;
-        GameEngine engine;
-        Controller controller;
+        GameClient wsClient;
         Renderer renderer;
-        FrameRenderer frameRenderer;
-        GameClickHandler clickHandler;
 
         try {
-            board = BoardParser.parse(STARTING_BOARD);
-            arbiter = new RealTimeArbiter();
-            gameState = new GameState();
-            engine = GameBootstrapper.buildEngine(board, arbiter, gameState);
-
-            BufferedReader loginReader = new java.io.BufferedReader(new InputStreamReader(System.in));
+            BufferedReader loginReader = new BufferedReader(new InputStreamReader(System.in));
 
             System.out.print("Enter your username: ");
             String username = loginReader.readLine();
@@ -60,22 +57,30 @@ public class Main {
             System.out.print("Enter your password: ");
             String password = loginReader.readLine();
 
-            GameClient wsClient = new GameClient(new java.net.URI("ws://localhost:8887"), engine);
+            wsClient = new GameClient(new java.net.URI("ws://localhost:8887"));
             wsClient.connectBlocking();
             wsClient.send("LOGIN " + username + " " + password);
 
-            controller = new Controller(engine, board, wsClient);
+            String loginReply = wsClient.awaitLoginReply();
+            if (loginReply.startsWith("LOGIN_FAILED")) {
+                System.out.println("ERROR " + loginReply);
+                return;
+            }
+
             renderer = new Renderer("resources/pieces_classic", CELL_SIZE);
-            renderer.initWindow(board.getWidth(), board.getHeight());
+            renderer.initWindow(8, 8);
 
-            frameRenderer = () -> {
-                RenderSnapshot snap = SnapshotFactory.build(
-                        board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE,
-                        gameState, WHITE_NAME, BLACK_NAME);
-                renderer.renderFrame(snap);
-            };
+            // "LOGIN_OK <rating>" (login רגיל) או "LOGIN_OK <rating> RECONNECTED <role>" (חזרה למשחק פעיל)
+            String[] loginParts = loginReply.split(" ");
+            int rating = Integer.parseInt(loginParts[1]);
 
-            frameRenderer.renderNow();
+            if (loginParts.length >= 4 && loginParts[2].equals("RECONNECTED")) {
+                String role = loginParts[3];
+                System.out.println("Reconnected (rating " + rating + ") - resuming your game as " + role);
+                startRound(wsClient, renderer);
+            } else {
+                playRound(wsClient, renderer);
+            }
 
         } catch (IllegalArgumentException e) {
             System.out.println("ERROR " + e.getMessage());
@@ -84,19 +89,13 @@ public class Main {
             throw new RuntimeException(e);
         }
 
-        if (!OBSERVER_MODE) {
-            clickHandler = new GameClickHandler(controller, frameRenderer);
-            renderer.setOnClick(clickHandler);
-
-            input.JumpClickHandler jumpClickHandler = new input.JumpClickHandler(controller, frameRenderer);
-            renderer.setOnRightClick(jumpClickHandler);
-        } else {
-            clickHandler = null;
-        }
-
         Timer gameTimer = new Timer(TICK_MS, e -> {
-            controller.update(TICK_MS);
-            frameRenderer.renderNow();
+            Controller controller = controllerRef.get();
+            FrameRenderer frameRenderer = frameRendererRef.get();
+            if (controller != null && frameRenderer != null) {
+                controller.update(TICK_MS);
+                frameRenderer.renderNow();
+            }
         });
         gameTimer.start();
 
@@ -109,6 +108,8 @@ public class Main {
 
             String[] parts = cmd.split("\\s+");
             String op = parts[0].toLowerCase();
+            Controller controller = controllerRef.get();
+            if (controller == null) continue;
 
             if (op.equals("click") && parts.length == 3) {
                 controller.handleMouseClick(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
@@ -122,9 +123,60 @@ public class Main {
                 controller.handleJumpCommand(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
 
             } else if (op.equals("print") && parts.length == 2 && parts[1].equalsIgnoreCase("board")) {
-                models.GameSnapshot printSnapshot = new models.GameSnapshot(board, gameState);
+                models.GameSnapshot printSnapshot = new models.GameSnapshot(boardRef.get(), gameStateRef.get());
                 System.out.println(BoardPrinter.print(printSnapshot));
             }
         }
+    }
+
+    // שולח PLAY, מציג SearchingDialog, ומנסה שוב אוטומטית (בלי פופ-אפ) על NO_MATCH
+    private static void playRound(GameClient wsClient, Renderer renderer) throws InterruptedException {
+        SearchingDialog searchingDialog = new SearchingDialog();
+        searchingDialog.open("Waiting for game to start (matching, or resuming an existing game)...");
+
+        String matchReply;
+        do {
+            wsClient.send("PLAY");
+            matchReply = wsClient.awaitMatchReply();
+        } while (matchReply.equals("NO_MATCH"));
+
+        searchingDialog.close();
+        System.out.println("Match found - you are " + matchReply.substring("ROLE ".length()));
+
+        startRound(wsClient, renderer);
+    }
+
+    // בונה board/engine/gameState/controller/frameRenderer טריים לסיבוב חדש, ומחליף אותם ב-AtomicReference-ים
+    private static void startRound(GameClient wsClient, Renderer renderer) {
+        Board board = BoardParser.parse(STARTING_BOARD);
+        RealTimeArbiter arbiter = new RealTimeArbiter();
+        GameState gameState = new GameState();
+        GameEngine engine = GameBootstrapper.buildEngine(board, arbiter, gameState);
+
+        wsClient.startNewRound(engine, gameState);
+
+        Controller controller = new Controller(engine, board, wsClient);
+        FrameRenderer frameRenderer = () -> {
+            RenderSnapshot snap = SnapshotFactory.build(
+                    board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE,
+                    gameState, WHITE_NAME, BLACK_NAME, wsClient.getDisconnectSecondsLeft(),
+                    wsClient.getDisconnectTotalSeconds(), wsClient.getReturnCountdownSecondsLeft(),
+                    wsClient.getReturnCountdownTotalSeconds());
+            renderer.renderFrame(snap);
+        };
+
+        boardRef.set(board);
+        gameStateRef.set(gameState);
+        controllerRef.set(controller);
+        frameRendererRef.set(frameRenderer);
+
+        if (!OBSERVER_MODE) {
+            GameClickHandler clickHandler = new GameClickHandler(controller, frameRenderer);
+            renderer.setOnClick(clickHandler);
+            input.JumpClickHandler jumpClickHandler = new input.JumpClickHandler(controller, frameRenderer);
+            renderer.setOnRightClick(jumpClickHandler);
+        }
+
+        frameRenderer.renderNow();
     }
 }

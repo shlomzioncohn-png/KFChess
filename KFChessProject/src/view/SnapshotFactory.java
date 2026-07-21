@@ -23,7 +23,11 @@ public class SnapshotFactory {
                                        int cellSize,
                                        GameState gameState,
                                        String whiteName,
-                                       String blackName) {
+                                       String blackName,
+                                       Integer disconnectSecondsLeft,
+                                       Integer disconnectTotalSeconds,
+                                       Integer returnCountdownSecondsLeft,
+                                       Integer returnCountdownTotalSeconds) {
         long currentClock = engine.getGameClockMs();
         List<PieceRenderSnapshot> pieceSnapshots = new ArrayList<>();
         List<Motion> activeMotions = engine.getActiveMotions();
@@ -59,7 +63,11 @@ public class SnapshotFactory {
                 recentLog,
                 whiteName,
                 blackName,
-                legalMoves
+                legalMoves,
+                disconnectSecondsLeft,
+                disconnectTotalSeconds,
+                returnCountdownSecondsLeft,
+                returnCountdownTotalSeconds
         );
     }
 

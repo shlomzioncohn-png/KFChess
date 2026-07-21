@@ -8,8 +8,8 @@ public class GameWindow {
 
     private JFrame frame;
     private JLabel imageLabel;
-    private ClickListener clickListener;
-    private ClickListener rightClickListener;
+    private volatile ClickListener clickListener;
+    private volatile ClickListener rightClickListener;
 
     public void open(Img initialImage) {
         SwingUtilities.invokeLater(() -> {

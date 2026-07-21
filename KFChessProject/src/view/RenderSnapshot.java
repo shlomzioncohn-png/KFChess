@@ -16,10 +16,11 @@ public record RenderSnapshot(
         List<String> moveLog,
         String whitePlayerName,
         String blackPlayerName,
-        List<Position> legalMoves
-
-
-
+        List<Position> legalMoves,
+        Integer disconnectSecondsLeft,
+        Integer disconnectTotalSeconds,
+        Integer returnCountdownSecondsLeft,
+        Integer returnCountdownTotalSeconds
 
 ) {
     public RenderSnapshot {
