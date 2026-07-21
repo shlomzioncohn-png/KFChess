@@ -69,6 +69,39 @@ public class GameEngine {
         bus.publish("piece.jumped", new JumpEvent(pos));
     }
 
+    /**
+     * מפעילה מהלך שכבר אושר במקום אחר (בדרך כלל: השרת) בלי ולידציה חוזרת -
+     * המנוע המקומי רק "מצייר" עובדה מוגמרת, לא מחליט שוב אם היא חוקית.
+     */
+    public void forceMove(Position src, Position dest) {
+        Piece piece = board.getPieceAt(src);
+        if (piece == null) {
+            System.out.println("[ENGINE] forceMove: no piece at " + src + " - ignoring (desync?)");
+            return;
+        }
+
+        activeMotions.removeIf(motion -> motion.getPiece() == piece);
+
+        long travelTime = arbiter.calculateTravelTime(src, dest);
+        piece.setState(PieceState.AIRBORNE);
+        Motion motion = new Motion(piece, src, dest, gameClockMs + travelTime);
+        activeMotions.add(motion);
+    }
+
+    /**
+     * מפעילה קפיצה שכבר אושרה במקום אחר (בדרך כלל: השרת) בלי ולידציה חוזרת.
+     */
+    public void forceJump(Position pos) {
+        Piece piece = board.getPieceAt(pos);
+        if (piece == null) {
+            System.out.println("[ENGINE] forceJump: no piece at " + pos + " - ignoring (desync?)");
+            return;
+        }
+        piece.setState(PieceState.JUMPING);
+        piece.setJumpExpiryTime(gameClockMs + JUMP_DURATION);
+        bus.publish("piece.jumped", new JumpEvent(pos));
+    }
+
     public void waitMs(long deltaMs) {
         gameClockMs += deltaMs;
         activeMotions.removeIf(motion -> resolveMotion(motion, gameClockMs));

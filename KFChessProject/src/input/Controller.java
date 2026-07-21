@@ -28,19 +28,25 @@ public class Controller {
         Position pos = BoardMapper.mapPixelToPosition(x, y, board);
         if (pos == null) return; // לחיצה מחוץ ללוח
 
+        if (selectedPosition != null && board.getPieceAt(selectedPosition) == null) {
+            // הכלי שנבחר כבר לא שם (זז/נאכל בינתיים - משחק בזמן-אמת) - מבטלים בחירה ישנה
+            selectedPosition = null;
+        }
+
         if (selectedPosition == null) {
             if (board.getPieceAt(pos) != null) {
                 selectedPosition = pos;
                 System.out.println("Selected piece at: " + pos);
             }
-        }
-        else {
-            if (board.getPieceAt(pos) != null && board.getPieceAt(pos).getColor() == board.getPieceAt(selectedPosition).getColor()) {
+        } else {
+            Piece selectedPiece = board.getPieceAt(selectedPosition);
+            Piece targetPiece = board.getPieceAt(pos);
+
+            if (targetPiece != null && targetPiece.getColor() == selectedPiece.getColor()) {
                 selectedPosition = pos;
             } else {
                 System.out.println("Attempting move from " + selectedPosition + " to " + pos);
-                Piece movingPiece = board.getPieceAt(selectedPosition);
-                String command = CommandBuilder.buildMoveCommand(movingPiece, selectedPosition, pos, board.getHeight());
+                String command = CommandBuilder.buildMoveCommand(selectedPiece, selectedPosition, pos, board.getHeight());
                 try {
                     client.send(command);
                 } catch (Exception e) {

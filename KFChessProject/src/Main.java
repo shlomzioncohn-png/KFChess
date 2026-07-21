@@ -89,6 +89,21 @@ public class Main {
             throw new RuntimeException(e);
         }
 
+        // thread ייעודי לסיבובים 2+: ממתין ל-RETURN_TO_QUEUE ואז חוזר על playRound.
+        // חייב thread נפרד (לא ה-network thread, לא ה-EDT) כדי לא לחסום אף אחד מהם.
+        Thread rematchLoop = new Thread(() -> {
+            try {
+                while (true) {
+                    wsClient.awaitReturnToQueue();
+                    playRound(wsClient, renderer);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "rematch-loop");
+        rematchLoop.setDaemon(true);
+        rematchLoop.start();
+
         Timer gameTimer = new Timer(TICK_MS, e -> {
             Controller controller = controllerRef.get();
             FrameRenderer frameRenderer = frameRendererRef.get();

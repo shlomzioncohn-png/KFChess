@@ -151,7 +151,7 @@ public class GameClient extends WebSocketClient {
             }
             try {
                 Position pos = ServerMessageParser.parseJump(message);
-                currentEngine.triggerJump(pos);
+                currentEngine.forceJump(pos);
             } catch (IllegalArgumentException e) {
                 System.out.println("[CLIENT] bad jump message: " + message);
             }
@@ -165,7 +165,7 @@ public class GameClient extends WebSocketClient {
         }
         try {
             Position[] positions = ServerMessageParser.parseMove(message);
-            currentEngine.tryMove(positions[0], positions[1]);
+            currentEngine.forceMove(positions[0], positions[1]);
         } catch (IllegalArgumentException e) {
             System.out.println("[CLIENT] not a move message: " + message);
         }
