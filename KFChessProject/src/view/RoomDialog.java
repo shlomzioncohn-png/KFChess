@@ -2,53 +2,73 @@ package view;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * חלון מודלי עם textbox + 3 כפתורים (Create/Join/Cancel). לא נוגע ברשת בכלל -
- * רק אוסף מה המשתמש בחר, ומחזיר תוצאה. שליחת CREATE_ROOM/JOIN_ROOM בפועל
- * וההמתנה לתשובה קורים אצל הקורא (Main.java), אחרי ש-open() חוזרת.
+ * חלון לא-מודלי עם textbox + 3 כפתורים (Create/Join/Cancel). לא נוגע ברשת בכלל -
+ * רק אוסף פעולות מהמשתמש. שליחת CREATE_ROOM/JOIN_ROOM בפועל וההמתנה לתשובה
+ * קורים אצל הקורא (Main.java). החלון נשאר פתוח בין ניסיונות (למשל אחרי
+ * JOIN_FAILED) - הקורא יכול להציג שגיאה עם showError() ולחכות לפעולה הבאה
+ * באותו חלון בדיוק, בלי לאבד את מה שהמשתמש כבר הקליד.
  */
 public class RoomDialog {
 
     public enum Action { CREATE, JOIN, CANCEL }
 
-    public record Result(Action action, String roomId) {}
+    private JDialog dialog;
+    private JTextField roomIdField;
+    private JLabel statusLabel;
 
-    public Result open() {
-        AtomicReference<Result> result = new AtomicReference<>(new Result(Action.CANCEL, null));
+    private final BlockingQueue<Action> actions = new LinkedBlockingQueue<>();
+    private volatile String lastRoomId;
 
+    public void open() {
         try {
             SwingUtilities.invokeAndWait(() -> {
-                JDialog dialog = new JDialog((Frame) null, "Room", true);
+                dialog = new JDialog((Frame) null, "Room", false);
                 dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
 
-                JTextField roomIdField = new JTextField(10);
+                roomIdField = new JTextField(10);
+                statusLabel = new JLabel("To join: enter the room code your opponent shared. To start a new game: leave empty and click Create.");
+
                 JButton createButton = new JButton("Create");
                 JButton joinButton = new JButton("Join");
                 JButton cancelButton = new JButton("Cancel");
 
-                createButton.addActionListener(e -> {
-                    result.set(new Result(Action.CREATE, null));
-                    dialog.dispose();
-                });
+                createButton.addActionListener(e -> actions.add(Action.CREATE));
+
                 joinButton.addActionListener(e -> {
-                    result.set(new Result(Action.JOIN, roomIdField.getText().trim()));
-                    dialog.dispose();
-                });
-                cancelButton.addActionListener(e -> {
-                    result.set(new Result(Action.CANCEL, null));
-                    dialog.dispose();
+                    String id = roomIdField.getText().trim();
+                    if (id.isEmpty()) {
+                        statusLabel.setText("Please enter a room code first.");
+                        return;
+                    }
+                    lastRoomId = id;
+                    actions.add(Action.JOIN);
                 });
 
-                JPanel panel = new JPanel();
-                panel.add(new JLabel("Room ID:"));
-                panel.add(roomIdField);
-                panel.add(createButton);
-                panel.add(joinButton);
-                panel.add(cancelButton);
+                cancelButton.addActionListener(e -> actions.add(Action.CANCEL));
 
-                dialog.add(panel);
+                JPanel fieldPanel = new JPanel();
+                fieldPanel.add(new JLabel("Room code:"));
+                fieldPanel.add(roomIdField);
+
+                JPanel buttonPanel = new JPanel();
+                buttonPanel.add(createButton);
+                buttonPanel.add(joinButton);
+                buttonPanel.add(cancelButton);
+
+                JPanel root = new JPanel();
+                root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
+                statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+                fieldPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+                buttonPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+                root.add(statusLabel);
+                root.add(fieldPanel);
+                root.add(buttonPanel);
+
+                dialog.add(root);
                 dialog.pack();
                 dialog.setLocationRelativeTo(null);
                 dialog.setVisible(true);
@@ -56,7 +76,25 @@ public class RoomDialog {
         } catch (Exception e) {
             System.out.println("[UI] RoomDialog failed: " + e.getMessage());
         }
+    }
 
-        return result.get();
+    public Action awaitAction() throws InterruptedException {
+        return actions.take();
+    }
+
+    public String getRoomId() {
+        return lastRoomId;
+    }
+
+    public void showError(String message) {
+        SwingUtilities.invokeLater(() -> statusLabel.setText(message));
+    }
+
+    public void close() {
+        SwingUtilities.invokeLater(() -> {
+            if (dialog != null) {
+                dialog.dispose();
+            }
+        });
     }
 }

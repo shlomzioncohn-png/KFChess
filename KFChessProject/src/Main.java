@@ -31,16 +31,6 @@ public class Main {
     private static final boolean OBSERVER_MODE = false;
     private static final int TICK_MS = 16;
 
-    private static final String STARTING_BOARD =
-            "bR bN bB bK bQ bB bN bR\n" +
-                    "bP bP bP bP bP bP bP bP\n" +
-                    ".  .  .  .  .  .  .  .\n" +
-                    ".  .  .  .  .  .  .  .\n" +
-                    ".  .  .  .  .  .  .  .\n" +
-                    ".  .  .  .  .  .  .  .\n" +
-                    "wP wP wP wP wP wP wP wP\n" +
-                    "wR wN wB wK wQ wB wN wR";
-
     // מצב הסיבוב הנוכחי - מוחלף בכל startRound(), נקרא מה-Timer (EDT) וממתודות אחרות
     private static final AtomicReference<Board> boardRef = new AtomicReference<>();
     private static final AtomicReference<GameState> gameStateRef = new AtomicReference<>();
@@ -81,7 +71,8 @@ public class Main {
             if (loginParts.length >= 4 && loginParts[2].equals("RECONNECTED")) {
                 String role = loginParts[3];
                 System.out.println("Reconnected (rating " + rating + ") - resuming your game as " + role);
-                startRound(wsClient, renderer);
+                String boardLayout = wsClient.awaitBoardState();
+                startRound(wsClient, renderer, boardLayout);
             } else {
                 chooseGameMode(wsClient, renderer);
             }
@@ -165,54 +156,56 @@ public class Main {
         }
     }
 
-    // מחזירה true אם המשחק התחיל בפועל (create/join הצליחו), false אם צריך לחזור למסך הבית
+    // מחזירה true אם המשחק התחיל בפועל (create/join הצליחו), false אם צריך לחזור למסך הבית.
+    // אותו RoomDialog נשאר פתוח לאורך כל הניסיונות (כולל אחרי JOIN_FAILED) - לא נפתח מחדש בכל כישלון.
     private static boolean handleRoomChoice(GameClient wsClient, Renderer renderer) throws InterruptedException {
-        RoomDialog.Result roomChoice = new RoomDialog().open();
+        RoomDialog dialog = new RoomDialog();
+        dialog.open();
 
-        if (roomChoice.action() == RoomDialog.Action.CANCEL) {
-            wsClient.send("CANCEL");
-            return false;
-        }
+        while (true) {
+            RoomDialog.Action action = dialog.awaitAction();
 
-        if (roomChoice.action() == RoomDialog.Action.CREATE) {
-            wsClient.send("CREATE_ROOM");
-        } else {
-            String roomId = roomChoice.roomId();
-            if (roomId == null || roomId.isEmpty()) {
+            if (action == RoomDialog.Action.CANCEL) {
+                dialog.close();
+                wsClient.send("CANCEL");
                 return false;
             }
-            wsClient.send("JOIN_ROOM " + roomId);
+
+            if (action == RoomDialog.Action.CREATE) {
+                wsClient.send("CREATE_ROOM");
+            } else {
+                wsClient.send("JOIN_ROOM " + dialog.getRoomId());
+            }
+
+            String roomReply = wsClient.awaitRoomReply();
+
+            if (roomReply.startsWith("JOIN_FAILED")) {
+                dialog.showError("Room not found. Please check the code and try again.");
+                continue;
+            }
+
+            dialog.close();
+
+            if (roomReply.startsWith("ROOM_CREATED ")) {
+                String roomId = roomReply.substring("ROOM_CREATED ".length());
+                try {
+                    SwingUtilities.invokeAndWait(() ->
+                            JOptionPane.showMessageDialog(null,
+                                    "Room created! Share this code with your opponent:\n\n" + roomId,
+                                    "Room Created", JOptionPane.INFORMATION_MESSAGE)
+                    );
+                } catch (Exception ignored) {}
+            } else {
+                System.out.println("Joined room: " + roomReply.substring("ROOM_JOINED ".length()));
+            }
+
+            String matchReply = wsClient.awaitMatchReply();
+            System.out.println("You are " + matchReply.substring("ROLE ".length()));
+
+            String boardLayout = wsClient.awaitBoardState();
+            startRound(wsClient, renderer, boardLayout);
+            return true;
         }
-
-        String roomReply = wsClient.awaitRoomReply();
-
-        if (roomReply.startsWith("JOIN_FAILED")) {
-            SwingUtilities.invokeLater(() ->
-                    JOptionPane.showMessageDialog(null,
-                            "Room not found. Please check the code and try again.",
-                            "Join Failed", JOptionPane.WARNING_MESSAGE)
-            );
-            return false;
-        }
-
-        if (roomReply.startsWith("ROOM_CREATED ")) {
-            String roomId = roomReply.substring("ROOM_CREATED ".length());
-            try {
-                SwingUtilities.invokeAndWait(() ->
-                        JOptionPane.showMessageDialog(null,
-                                "Room created! Share this code with your opponent:\n\n" + roomId,
-                                "Room Created", JOptionPane.INFORMATION_MESSAGE)
-                );
-            } catch (Exception ignored) {}
-        } else {
-            System.out.println("Joined room: " + roomReply.substring("ROOM_JOINED ".length()));
-        }
-
-        String matchReply = wsClient.awaitMatchReply();
-        System.out.println("You are " + matchReply.substring("ROLE ".length()));
-
-        startRound(wsClient, renderer);
-        return true;
     }
 
     // שולח PLAY, מציג SearchingDialog, ומנסה שוב אוטומטית (בלי פופ-אפ) על NO_MATCH
@@ -229,12 +222,15 @@ public class Main {
         searchingDialog.close();
         System.out.println("Match found - you are " + matchReply.substring("ROLE ".length()));
 
-        startRound(wsClient, renderer);
+        String boardLayout = wsClient.awaitBoardState();
+        startRound(wsClient, renderer, boardLayout);
     }
 
-    // בונה board/engine/gameState/controller/frameRenderer טריים לסיבוב חדש, ומחליף אותם ב-AtomicReference-ים
-    private static void startRound(GameClient wsClient, Renderer renderer) {
-        Board board = BoardParser.parse(STARTING_BOARD);
+    // בונה board/engine/gameState/controller/frameRenderer טריים לסיבוב חדש, ומחליף אותם ב-AtomicReference-ים.
+    // boardLayout מגיע מהשרת (BOARD_STATE) - הלוח *הנוכחי* בפועל, לא לוח פתיחה מקומי -
+    // כדי שמצטרף באמצע משחק (spectator/BLACK מאוחר) או reconnect יראו את המצב האמיתי.
+    private static void startRound(GameClient wsClient, Renderer renderer, String boardLayout) {
+        Board board = BoardParser.parse(boardLayout);
         RealTimeArbiter arbiter = new RealTimeArbiter();
         GameState gameState = new GameState();
         GameEngine engine = GameBootstrapper.buildEngine(board, arbiter, gameState);

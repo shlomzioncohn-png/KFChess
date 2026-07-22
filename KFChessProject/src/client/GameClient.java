@@ -19,6 +19,7 @@ public class GameClient extends WebSocketClient {
     private final BlockingQueue<String> loginReplies = new LinkedBlockingQueue<>();
     private final BlockingQueue<String> matchReplies = new LinkedBlockingQueue<>();
     private final BlockingQueue<String> roomReplies = new LinkedBlockingQueue<>();
+    private final BlockingQueue<String> boardStateReplies = new LinkedBlockingQueue<>();
     private final BlockingQueue<Boolean> returnToQueueSignal = new LinkedBlockingQueue<>();
     private volatile long disconnectDeadline = -1;
     private volatile int disconnectTotalSeconds = -1;
@@ -44,6 +45,11 @@ public class GameClient extends WebSocketClient {
 
     public String awaitRoomReply() throws InterruptedException {
         return roomReplies.take();
+    }
+
+    // מחזירה את פריסת הלוח הנוכחית (לא לוח פתיחה) שהשרת שלח בהצטרפות/reconnect
+    public String awaitBoardState() throws InterruptedException {
+        return boardStateReplies.take();
     }
 
     public void awaitReturnToQueue() throws InterruptedException {
@@ -105,6 +111,11 @@ public class GameClient extends WebSocketClient {
                 || message.startsWith("JOIN_FAILED") || message.equals("ROOM_CANCELLED")) {
             ClientLogger.log("ROOM: " + message);
             roomReplies.add(message);
+            return;
+        }
+
+        if (message.startsWith("BOARD_STATE\n")) {
+            boardStateReplies.add(message.substring("BOARD_STATE\n".length()));
             return;
         }
 

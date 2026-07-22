@@ -5,7 +5,9 @@ import engine.GameEngine;
 import io.BoardParser;
 import models.Board;
 import models.GameState;
+import models.Piece;
 import models.Position;
+import models.enums.PieceColor;
 import org.java_websocket.WebSocket;
 import realtime.RealTimeArbiter;
 
@@ -92,6 +94,38 @@ public class GameSession {
 
     public String getUsernameByRole(PlayerRole targetRole) {
         return playerRegistry.getUsernameByRole(targetRole);
+    }
+
+    // הלוח הנוכחי (לא לוח פתיחה!) באותו פורמט טקסט ש-BoardParser.parse כבר יודע לקרוא -
+    // כדי שמצטרף חדש (join באמצע משחק, או reconnect) יראה את המצב האמיתי, לא לוח ריק מחדש.
+    public String serializeBoard() {
+        StringBuilder sb = new StringBuilder();
+        for (int row = 0; row < board.getHeight(); row++) {
+            for (int col = 0; col < board.getWidth(); col++) {
+                if (col > 0) {
+                    sb.append(' ');
+                }
+                Piece piece = board.getPieceAt(new Position(row, col));
+                sb.append(piece == null ? "." : pieceCode(piece));
+            }
+            if (row < board.getHeight() - 1) {
+                sb.append('\n');
+            }
+        }
+        return sb.toString();
+    }
+
+    private String pieceCode(Piece piece) {
+        char colorChar = piece.getColor() == PieceColor.WHITE ? 'w' : 'b';
+        char typeChar = switch (piece.getType()) {
+            case KING -> 'K';
+            case QUEEN -> 'Q';
+            case ROOK -> 'R';
+            case BISHOP -> 'B';
+            case KNIGHT -> 'N';
+            case PAWN -> 'P';
+        };
+        return "" + colorChar + typeChar;
     }
 
     // בונה board/engine חדשים לגמרי לתחילת משחק (ראשון, או rematch באותו room)
