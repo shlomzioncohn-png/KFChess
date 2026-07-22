@@ -15,7 +15,9 @@ import java.util.List;
 
 public class SnapshotFactory {
 
-    private static final double JUMP_HEIGHT_PX = 40.0;
+    // יחס לגובה הקפיצה, לא פיקסלים קבועים - כדי שהקפיצה תישאר פרופורציונלית ב-cellSize דינמי
+    private static final double JUMP_HEIGHT_RATIO = 0.4;
+    private static final int MAX_LOG_ROWS_PER_PLAYER = 10;
 
     public static RenderSnapshot build(Board board, GameEngine engine,
                                        RealTimeArbiter arbiter,
@@ -27,7 +29,8 @@ public class SnapshotFactory {
                                        Integer disconnectSecondsLeft,
                                        Integer disconnectTotalSeconds,
                                        Integer returnCountdownSecondsLeft,
-                                       Integer returnCountdownTotalSeconds) {
+                                       Integer returnCountdownTotalSeconds,
+                                       String roomId) {
         long currentClock = engine.getGameClockMs();
         List<PieceRenderSnapshot> pieceSnapshots = new ArrayList<>();
         List<Motion> activeMotions = engine.getActiveMotions();
@@ -45,10 +48,8 @@ public class SnapshotFactory {
                 ? gameState.getWinner().name()
                 : null;
 
-        List<String> fullLog = gameState.getMoveLog();
-        List<String> recentLog = fullLog.size() <= 5
-                ? fullLog
-                : fullLog.subList(fullLog.size() - 5, fullLog.size());
+        List<MoveLogRow> whiteLog = buildPlayerLog(gameState.getMoveLog(PieceColor.WHITE));
+        List<MoveLogRow> blackLog = buildPlayerLog(gameState.getMoveLog(PieceColor.BLACK));
 
         List<Position> legalMoves = selectedPosition != null
                 ? new rules.RuleEngine().getLegalDestinations(board, selectedPosition)
@@ -60,15 +61,34 @@ public class SnapshotFactory {
                 gameState.isGameOver(), winnerText,
                 gameState.getScore(PieceColor.WHITE),
                 gameState.getScore(PieceColor.BLACK),
-                recentLog,
+                whiteLog,
+                blackLog,
                 whiteName,
                 blackName,
                 legalMoves,
                 disconnectSecondsLeft,
                 disconnectTotalSeconds,
                 returnCountdownSecondsLeft,
-                returnCountdownTotalSeconds
+                returnCountdownTotalSeconds,
+                roomId
         );
+    }
+
+    private static List<MoveLogRow> buildPlayerLog(List<GameState.MoveLogEntry> entries) {
+        List<GameState.MoveLogEntry> recent = entries.size() <= MAX_LOG_ROWS_PER_PLAYER
+                ? entries
+                : entries.subList(entries.size() - MAX_LOG_ROWS_PER_PLAYER, entries.size());
+
+        List<MoveLogRow> rows = new ArrayList<>();
+        for (GameState.MoveLogEntry entry : recent) {
+            rows.add(new MoveLogRow(formatClock(entry.gameClockMs()), entry.description()));
+        }
+        return rows;
+    }
+
+    private static String formatClock(long gameClockMs) {
+        long totalSeconds = gameClockMs / 1000;
+        return (totalSeconds / 60) + ":" + String.format("%02d", totalSeconds % 60);
     }
 
     private static PieceRenderSnapshot buildPieceSnapshot(Piece piece, List<Motion> activeMotions,
@@ -113,7 +133,8 @@ public class SnapshotFactory {
                             GameEngine.JUMP_DURATION - (piece.getJumpExpiryTime() - currentClock));
 
                     double jumpProgress = Math.min(1.0, stateElapsedMillis / (double) GameEngine.JUMP_DURATION);
-                    double jumpOffset = -JUMP_HEIGHT_PX * 4 * jumpProgress * (1 - jumpProgress);
+                    double jumpHeightPx = cellSize * JUMP_HEIGHT_RATIO;
+                    double jumpOffset = -jumpHeightPx * 4 * jumpProgress * (1 - jumpProgress);
                     pixelY = pixelY + jumpOffset;
                 }
                 case LONG_RESTING -> {

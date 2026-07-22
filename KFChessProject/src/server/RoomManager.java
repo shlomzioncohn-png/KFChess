@@ -78,6 +78,7 @@ public class RoomManager {
         conn.send("ROOM_CREATED " + session.getRoomId());
         conn.send("ROLE " + PlayerRole.WHITE);
         conn.send("BOARD_STATE\n" + session.serializeBoard());
+        session.broadcastToMembers(session.buildPlayersMessage());
         DatabaseManager.logEvent(session.getRoomId(), "CREATE_ROOM", usernames.get(conn) + " as WHITE");
     }
 
@@ -101,6 +102,7 @@ public class RoomManager {
         conn.send("ROOM_JOINED " + roomId);
         conn.send("ROLE " + role);
         conn.send("BOARD_STATE\n" + session.serializeBoard());
+        session.broadcastToMembers(session.buildPlayersMessage());
         DatabaseManager.logEvent(roomId, "JOIN_ROOM", usernames.get(conn) + " as " + role);
     }
 
@@ -127,6 +129,7 @@ public class RoomManager {
         String boardState = "BOARD_STATE\n" + session.serializeBoard();
         a.send(boardState);
         b.send(boardState);
+        session.broadcastToMembers(session.buildPlayersMessage());
         DatabaseManager.logEvent(session.getRoomId(), "MATCH_CREATED", usernames.get(a) + " vs " + usernames.get(b));
     }
 
@@ -137,6 +140,7 @@ public class RoomManager {
             if (role != null) {
                 joinRoom(newConn, session);
                 newConn.send("BOARD_STATE\n" + session.serializeBoard());
+                session.broadcastToMembers(session.buildPlayersMessage());
                 return role;
             }
         }

@@ -22,6 +22,8 @@ public class GameBootstrapper {
         bus.subscribe("move.completed", logSubscriber);
         bus.subscribe("move.completed", soundSubscriber);
         bus.subscribe("game.over", soundSubscriber);
+        bus.subscribe("piece.promoted", soundSubscriber);
+        bus.subscribe("move.illegal", soundSubscriber);
         return new GameEngine(board, arbiter, gameState, bus);
     }
 }

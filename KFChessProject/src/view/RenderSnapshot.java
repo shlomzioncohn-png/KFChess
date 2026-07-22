@@ -13,19 +13,22 @@ public record RenderSnapshot(
         String winner,
         int whiteScore,
         int blackScore,
-        List<String> moveLog,
+        List<MoveLogRow> whiteMoveLog,
+        List<MoveLogRow> blackMoveLog,
         String whitePlayerName,
         String blackPlayerName,
         List<Position> legalMoves,
         Integer disconnectSecondsLeft,
         Integer disconnectTotalSeconds,
         Integer returnCountdownSecondsLeft,
-        Integer returnCountdownTotalSeconds
+        Integer returnCountdownTotalSeconds,
+        String roomId
 
 ) {
     public RenderSnapshot {
         pieces = List.copyOf(pieces);
-        moveLog = List.copyOf(moveLog);
+        whiteMoveLog = List.copyOf(whiteMoveLog);
+        blackMoveLog = List.copyOf(blackMoveLog);
         legalMoves = List.copyOf(legalMoves);
 
     }

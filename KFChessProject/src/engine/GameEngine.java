@@ -5,6 +5,7 @@ import bus.events.CaptureEvent;
 import bus.events.GameOverEvent;
 import bus.events.JumpEvent;
 import bus.events.MoveEvent;
+import bus.events.PromotionEvent;
 import models.Board;
 import models.GameState;
 import models.Piece;
@@ -169,10 +170,11 @@ public class GameEngine {
         movingPiece.setState(PieceState.LONG_RESTING);
         movingPiece.setRestExpiryTime(currentClock + LONG_REST_DURATION);
 
-        bus.publish("move.completed", new MoveEvent(movingPiece, src, dest, target != null));
+        bus.publish("move.completed", new MoveEvent(movingPiece, src, dest, target != null, currentClock));
 
         if (PromotionRule.isEligible(board, movingPiece, dest)) {
             movingPiece.promote(PromotionRule.promotedType());
+            bus.publish("piece.promoted", new PromotionEvent(movingPiece));
         }
 
         if (decisiveCapture) {

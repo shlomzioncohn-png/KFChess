@@ -18,10 +18,10 @@ public class LogSubscriber implements EventListener {
         if (!(payload instanceof MoveEvent event)) return;
 
         Piece piece = event.getPiece();
-        String logEntry = piece.getColor() + " " + piece.getType()
+        String description = piece.getType()
                 + " " + event.getSource() + " -> " + event.getDestination()
                 + (event.wasCapture() ? " (capture)" : "");
 
-        gameState.addLogEntry(logEntry);
+        gameState.addLogEntry(piece.getColor(), description, event.getGameClockMs());
     }
 }

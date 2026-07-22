@@ -120,6 +120,18 @@ public class Img {
         g.dispose();
     }
 
+    /* ----------- draw this image onto another, scaled to a specific size ----------- */
+    public void drawOn(Img other, int x, int y, int width, int height) {
+        if (img == null || other.img == null)
+            throw new IllegalStateException("Both images must be loaded.");
+
+        Graphics2D g = other.img.createGraphics();
+        g.setComposite(AlphaComposite.SrcOver);
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(img, x, y, width, height, null);
+        g.dispose();
+    }
+
     /* ----------- deep copy of this image ----------- */
     public Img copy() {
         if (img == null) {

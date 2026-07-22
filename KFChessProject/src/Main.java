@@ -10,6 +10,7 @@ import input.Controller;
 import input.GameClickHandler;
 import view.FrameRenderer;
 import view.HomeDialog;
+import view.LoginDialog;
 import view.Renderer;
 import view.RenderSnapshot;
 import view.RoomDialog;
@@ -26,12 +27,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class Main {
     private static final int CELL_SIZE = 100;
-    private static final String WHITE_NAME = "Player White";
-    private static final String BLACK_NAME = "Player Black";
     private static final boolean OBSERVER_MODE = false;
     private static final int TICK_MS = 16;
 
-    // מצב הסיבוב הנוכחי - מוחלף בכל startRound(), נקרא מה-Timer (EDT) וממתודות אחרות
     private static final AtomicReference<Board> boardRef = new AtomicReference<>();
     private static final AtomicReference<GameState> gameStateRef = new AtomicReference<>();
     private static final AtomicReference<Controller> controllerRef = new AtomicReference<>();
@@ -43,26 +41,40 @@ public class Main {
         Renderer renderer;
 
         try {
-            BufferedReader loginReader = new BufferedReader(new InputStreamReader(System.in));
-
-            System.out.print("Enter your username: ");
-            String username = loginReader.readLine();
-
-            System.out.print("Enter your password: ");
-            String password = loginReader.readLine();
-
             wsClient = new GameClient(new java.net.URI("ws://localhost:8887"));
             wsClient.connectBlocking();
-            wsClient.send("LOGIN " + username + " " + password);
 
-            String loginReply = wsClient.awaitLoginReply();
-            if (loginReply.startsWith("LOGIN_FAILED")) {
-                System.out.println("ERROR " + loginReply);
-                return;
+            LoginDialog loginDialog = new LoginDialog();
+            loginDialog.open();
+
+            String loginReply;
+            while (true) {
+                LoginDialog.Action action = loginDialog.awaitAction();
+                if (action == LoginDialog.Action.CANCEL) {
+                    loginDialog.close();
+                    return;
+                }
+
+                LoginDialog.Credentials credentials = loginDialog.getCredentials();
+                wsClient.send("LOGIN " + credentials.username() + " " + credentials.password());
+
+                loginReply = wsClient.awaitLoginReply();
+                if (loginReply.startsWith("LOGIN_FAILED")) {
+                    loginDialog.showError("Login failed. Please check your username and password.");
+                    continue;
+                }
+                break;
             }
+            loginDialog.close();
 
             renderer = new Renderer("resources/pieces_classic", CELL_SIZE);
             renderer.initWindow(8, 8);
+            renderer.setOnResize(() -> {
+                FrameRenderer frameRenderer = frameRendererRef.get();
+                if (frameRenderer != null) {
+                    frameRenderer.renderNow();
+                }
+            });
 
             // "LOGIN_OK <rating>" (login רגיל) או "LOGIN_OK <rating> RECONNECTED <role>" (חזרה למשחק פעיל)
             String[] loginParts = loginReply.split(" ");
@@ -72,7 +84,8 @@ public class Main {
                 String role = loginParts[3];
                 System.out.println("Reconnected (rating " + rating + ") - resuming your game as " + role);
                 String boardLayout = wsClient.awaitBoardState();
-                startRound(wsClient, renderer, boardLayout);
+                // reconnect: roomId עדיין לא נשלח מהשרת בזרימה הזו - לא כלול בשלב הזה
+                startRound(wsClient, renderer, boardLayout, null);
             } else {
                 chooseGameMode(wsClient, renderer);
             }
@@ -186,8 +199,9 @@ public class Main {
 
             dialog.close();
 
+            String roomId;
             if (roomReply.startsWith("ROOM_CREATED ")) {
-                String roomId = roomReply.substring("ROOM_CREATED ".length());
+                roomId = roomReply.substring("ROOM_CREATED ".length());
                 try {
                     SwingUtilities.invokeAndWait(() ->
                             JOptionPane.showMessageDialog(null,
@@ -196,14 +210,15 @@ public class Main {
                     );
                 } catch (Exception ignored) {}
             } else {
-                System.out.println("Joined room: " + roomReply.substring("ROOM_JOINED ".length()));
+                roomId = roomReply.substring("ROOM_JOINED ".length());
+                System.out.println("Joined room: " + roomId);
             }
 
             String matchReply = wsClient.awaitMatchReply();
             System.out.println("You are " + matchReply.substring("ROLE ".length()));
 
             String boardLayout = wsClient.awaitBoardState();
-            startRound(wsClient, renderer, boardLayout);
+            startRound(wsClient, renderer, boardLayout, roomId);
             return true;
         }
     }
@@ -223,13 +238,15 @@ public class Main {
         System.out.println("Match found - you are " + matchReply.substring("ROLE ".length()));
 
         String boardLayout = wsClient.awaitBoardState();
-        startRound(wsClient, renderer, boardLayout);
+        // Quick Play: אין roomId רלוונטי להצגה (matchmaking אנונימי) - null בכוונה
+        startRound(wsClient, renderer, boardLayout, null);
     }
 
     // בונה board/engine/gameState/controller/frameRenderer טריים לסיבוב חדש, ומחליף אותם ב-AtomicReference-ים.
     // boardLayout מגיע מהשרת (BOARD_STATE) - הלוח *הנוכחי* בפועל, לא לוח פתיחה מקומי -
     // כדי שמצטרף באמצע משחק (spectator/BLACK מאוחר) או reconnect יראו את המצב האמיתי.
-    private static void startRound(GameClient wsClient, Renderer renderer, String boardLayout) {
+    // roomId: null ב-Quick Play (matchmaking אנונימי), הקוד האמיתי ב-room ידני (Create/Join).
+    private static void startRound(GameClient wsClient, Renderer renderer, String boardLayout, String roomId) {
         Board board = BoardParser.parse(boardLayout);
         RealTimeArbiter arbiter = new RealTimeArbiter();
         GameState gameState = new GameState();
@@ -237,13 +254,13 @@ public class Main {
 
         wsClient.startNewRound(engine, gameState);
 
-        Controller controller = new Controller(engine, board, wsClient);
+        Controller controller = new Controller(engine, board, wsClient, renderer::getCellSize);
         FrameRenderer frameRenderer = () -> {
             RenderSnapshot snap = SnapshotFactory.build(
-                    board, engine, arbiter, controller.getSelectedPosition(), CELL_SIZE,
-                    gameState, WHITE_NAME, BLACK_NAME, wsClient.getDisconnectSecondsLeft(),
+                    board, engine, arbiter, controller.getSelectedPosition(), renderer.getCellSize(),
+                    gameState, wsClient.getWhiteName(), wsClient.getBlackName(), wsClient.getDisconnectSecondsLeft(),
                     wsClient.getDisconnectTotalSeconds(), wsClient.getReturnCountdownSecondsLeft(),
-                    wsClient.getReturnCountdownTotalSeconds());
+                    wsClient.getReturnCountdownTotalSeconds(), roomId);
             renderer.renderFrame(snap);
         };
 

@@ -2,7 +2,9 @@ package bus;
 
 import bus.events.CaptureEvent;
 import bus.events.GameOverEvent;
+import bus.events.IllegalMoveEvent;
 import bus.events.MoveEvent;
+import bus.events.PromotionEvent;
 
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
@@ -15,10 +17,14 @@ public class SoundSubscriber implements EventListener {
     public void onEvent(String topic, Object payload) {
         if (payload instanceof CaptureEvent) {
             playSound("resources/sounds/capture.wav");
+        } else if (payload instanceof PromotionEvent) {
+            playSound("resources/sounds/promotion.wav");
         } else if (payload instanceof MoveEvent moveEvent && !moveEvent.wasCapture()) {
             playSound("resources/sounds/move.wav");
         } else if (payload instanceof GameOverEvent) {
             playSound("resources/sounds/game_over.wav");
+        } else if (payload instanceof IllegalMoveEvent) {
+            playSound("resources/sounds/illegal_move.wav");
         }
     }
 

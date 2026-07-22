@@ -19,7 +19,9 @@ public class GameState {
 
     private final Map<PieceColor, Integer> scores = new EnumMap<>(PieceColor.class);
 
-    private final List<String> moveLog = new ArrayList<>();
+    public record MoveLogEntry(PieceColor color, String description, long gameClockMs) {}
+
+    private final List<MoveLogEntry> moveLog = new ArrayList<>();
 
     public GameState() {
         this.gameOver = false;
@@ -65,12 +67,12 @@ public class GameState {
         return "Game is active";
     }
 
-    public void addLogEntry(String entry) {
-        moveLog.add(entry);
+    public void addLogEntry(PieceColor color, String description, long gameClockMs) {
+        moveLog.add(new MoveLogEntry(color, description, gameClockMs));
     }
 
-    public List<String> getMoveLog() {
-        return List.copyOf(moveLog);
+    public List<MoveLogEntry> getMoveLog(PieceColor color) {
+        return moveLog.stream().filter(e -> e.color() == color).toList();
     }
 
 

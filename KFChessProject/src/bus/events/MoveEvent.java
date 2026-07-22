@@ -9,12 +9,18 @@ public class MoveEvent {
     private final Position source;
     private final Position destination;
     private final boolean wasCapture;
+    private final long gameClockMs;
 
-    public MoveEvent(Piece piece, Position source, Position destination, boolean wasCapture) {
+    public MoveEvent(Piece piece, Position source, Position destination, boolean wasCapture, long gameClockMs) {
         this.piece = piece;
         this.source = source;
         this.destination = destination;
         this.wasCapture = wasCapture;
+        this.gameClockMs = gameClockMs;
+    }
+
+    public long getGameClockMs() {
+        return gameClockMs;
     }
 
     public Piece getPiece() {

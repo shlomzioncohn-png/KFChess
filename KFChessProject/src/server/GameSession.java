@@ -96,6 +96,13 @@ public class GameSession {
         return playerRegistry.getUsernameByRole(targetRole);
     }
 
+    // "PLAYERS <whiteName> <blackName>" - השמות האמיתיים (לא placeholder), "waiting" למי שעדיין לא הצטרף
+    public String buildPlayersMessage() {
+        String white = playerRegistry.getUsernameByRole(PlayerRole.WHITE);
+        String black = playerRegistry.getUsernameByRole(PlayerRole.BLACK);
+        return "PLAYERS " + (white == null ? "waiting" : white) + " " + (black == null ? "waiting" : black);
+    }
+
     // הלוח הנוכחי (לא לוח פתיחה!) באותו פורמט טקסט ש-BoardParser.parse כבר יודע לקרוא -
     // כדי שמצטרף חדש (join באמצע משחק, או reconnect) יראה את המצב האמיתי, לא לוח ריק מחדש.
     public String serializeBoard() {

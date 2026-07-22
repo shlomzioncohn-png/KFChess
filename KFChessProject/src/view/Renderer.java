@@ -9,22 +9,39 @@ public class Renderer {
 
     private static final String BOARD_IMAGE_PATH = "resources/board_classic.png";
     private static final int SIDEBAR_WIDTH = 250;
+    private static final int MIN_CELL_SIZE = 20;
 
     private final GameWindow gameWindow = new GameWindow();
     private final PieceImageLoader imageLoader;
-    private final int cellSize;
+
+    // נקרא (בדרך כלל) מ-render loop, אבל resize מגיע מה-EDT - חייב volatile, אין הבטחה ששניהם על אותו thread
+    private volatile int cellSize;
 
     public Renderer(String piecesRootFolder, int cellSize) {
         this.cellSize = cellSize;
         this.imageLoader = new PieceImageLoader(piecesRootFolder, cellSize);
     }
 
+    public int getCellSize() {
+        return cellSize;
+    }
+
+    public void setOnResize(Runnable listener) {
+        gameWindow.setResizeListener(listener);
+    }
+
     public void initWindow(int boardWidth, int boardHeight) {
         Img canvas = createCanvas(boardWidth * cellSize, boardHeight * cellSize);
-        gameWindow.open(canvas);
+        Dimension minimumSize = new Dimension(
+                boardWidth * MIN_CELL_SIZE + SIDEBAR_WIDTH,
+                boardHeight * MIN_CELL_SIZE
+        );
+        gameWindow.open(canvas, minimumSize);
     }
 
     public void renderFrame(RenderSnapshot snapshot) {
+        updateCellSize(snapshot.boardWidth(), snapshot.boardHeight());
+
         Img canvas = createCanvas(
                 snapshot.boardWidth() * cellSize,
                 snapshot.boardHeight() * cellSize
@@ -35,12 +52,21 @@ public class Renderer {
 
         for (PieceRenderSnapshot piece : snapshot.pieces()) {
             Img pieceImage = imageLoader.getFrame(piece);
-            pieceImage.drawOn(canvas, (int) Math.round(piece.pixelX()), (int) Math.round(piece.pixelY()));
+            pieceImage.drawOn(canvas, (int) Math.round(piece.pixelX()), (int) Math.round(piece.pixelY()),
+                    cellSize, cellSize);
         }
 
         drawSelectedCell(canvas, snapshot);
-        drawScore(canvas, snapshot);
-        drawMoveLog(canvas, snapshot);
+
+        if (snapshot.roomId() != null) {
+            drawRoomId(canvas, snapshot);
+        }
+
+        int boardPixelHeight = snapshot.boardHeight() * cellSize;
+        int halfHeight = boardPixelHeight / 2;
+        drawPlayerPanel(canvas, snapshot, true, 0, halfHeight);
+        drawPlayerPanel(canvas, snapshot, false, halfHeight, boardPixelHeight - halfHeight);
+        canvas.fillRect(snapshot.boardWidth() * cellSize, halfHeight, SIDEBAR_WIDTH, 2, Color.DARK_GRAY);
 
         if (snapshot.disconnectSecondsLeft() != null) {
             drawDisconnectCountdown(canvas, snapshot);
@@ -51,6 +77,21 @@ public class Renderer {
         }
 
         gameWindow.update(canvas);
+    }
+
+    // מחשבת מחדש את cellSize לפי הגודל הזמין בפועל בחלון, כדי שהלוח יישאר מרובע ולא יימתח.
+    // ה-sidebar נשאר ברוחב קבוע (SIDEBAR_WIDTH) - רק אזור הלוח עצמו מתאים את עצמו.
+    private void updateCellSize(int boardWidthCells, int boardHeightCells) {
+        Dimension available = gameWindow.getContentSize();
+        if (available.width <= 0 || available.height <= 0) {
+            return; // החלון עוד לא גלוי/מוצג בפועל - משאירים את הערך האחרון הידוע
+        }
+
+        int availableBoardWidth = available.width - SIDEBAR_WIDTH;
+        int availableBoardHeight = available.height;
+
+        int computed = Math.min(availableBoardWidth / boardWidthCells, availableBoardHeight / boardHeightCells);
+        cellSize = Math.max(MIN_CELL_SIZE, computed);
     }
 
     private Img createCanvas(int boardPixelWidth, int boardPixelHeight) {
@@ -65,6 +106,15 @@ public class Renderer {
         return canvas;
     }
 
+    // באנר קבוע בראש הלוח, רק ב-room ידני (Create/Join) - לא במשחקי Quick Play אנונימיים
+    private void drawRoomId(Img canvas, RenderSnapshot snapshot) {
+        String text = "Room: " + snapshot.roomId();
+        int boardPixelWidth = snapshot.boardWidth() * cellSize;
+
+        canvas.fillRect(0, 0, boardPixelWidth, 22, new Color(0, 0, 0, 160));
+        canvas.putText(text, 10, 16, 1.0f, Color.WHITE, 1);
+    }
+
     private void drawSelectedCell(Img canvas, RenderSnapshot snapshot) {
         if (snapshot.selectedPosition() == null) return;
         int x = snapshot.selectedPosition().getCol() * cellSize;
@@ -72,20 +122,38 @@ public class Renderer {
         canvas.drawRect(x, y, cellSize, cellSize, new Color(255, 215, 0, 180), 4);
     }
 
-    private void drawScore(Img canvas, RenderSnapshot snapshot) {
+    // מצייר את הפאנל של שחקן אחד (צבע+שם+ניקוד, ואז טבלת המהלכים שלו בלבד) בתוך פלח גובה נתון בסיידבר
+    private void drawPlayerPanel(Img canvas, RenderSnapshot snapshot, boolean isWhite, int panelY, int panelHeight) {
         int x = snapshot.boardWidth() * cellSize + 15;
-        canvas.putText("Score", x, 30, 1.4f, Color.DARK_GRAY, 2);
-        canvas.putText(snapshot.whitePlayerName() + ": " + snapshot.whiteScore(), x, 60, 1.1f, Color.BLACK, 1);
-        canvas.putText(snapshot.blackPlayerName() + ": " + snapshot.blackScore(), x, 85, 1.1f, Color.BLACK, 1);
-    }
 
-    private void drawMoveLog(Img canvas, RenderSnapshot snapshot) {
-        int x = snapshot.boardWidth() * cellSize + 15;
-        int startY = 130;
-        canvas.putText("Move Log", x, startY, 1.2f, Color.DARK_GRAY, 2);
+        Color swatchColor = isWhite ? Color.WHITE : Color.BLACK;
+        String colorLabel = isWhite ? "WHITE" : "BLACK";
+        String playerName = isWhite ? snapshot.whitePlayerName() : snapshot.blackPlayerName();
+        int score = isWhite ? snapshot.whiteScore() : snapshot.blackScore();
+        java.util.List<MoveLogRow> log = isWhite ? snapshot.whiteMoveLog() : snapshot.blackMoveLog();
 
-        for (int i = 0; i < snapshot.moveLog().size(); i++) {
-            canvas.putText(snapshot.moveLog().get(i), x, startY + 25 + i * 18, 0.75f, Color.BLUE, 1);
+        int swatchSize = 14;
+        int headerY = panelY + 10;
+        canvas.fillRect(x, headerY, swatchSize, swatchSize, swatchColor);
+        canvas.drawRect(x, headerY, swatchSize, swatchSize, Color.DARK_GRAY, 1);
+        canvas.putText(colorLabel + "  " + playerName + " - " + score,
+                x + swatchSize + 8, headerY + swatchSize, 1.1f, Color.BLACK, 1);
+
+        int dividerY = panelY + 35;
+        canvas.fillRect(x, dividerY, SIDEBAR_WIDTH - 20, 1, Color.GRAY);
+
+        int headerRowY = panelY + 55;
+        canvas.putText("Time", x, headerRowY, 0.8f, Color.DARK_GRAY, 1);
+        canvas.putText("Move", x + 50, headerRowY, 0.8f, Color.DARK_GRAY, 1);
+
+        int rowY = headerRowY + 20;
+        for (MoveLogRow row : log) {
+            if (rowY > panelY + panelHeight - 10) {
+                break;
+            }
+            canvas.putText(row.time(), x, rowY, 0.75f, Color.BLUE, 1);
+            canvas.putText(row.description(), x + 50, rowY, 0.75f, Color.BLUE, 1);
+            rowY += 18;
         }
     }
 

@@ -25,6 +25,8 @@ public class GameClient extends WebSocketClient {
     private volatile int disconnectTotalSeconds = -1;
     private volatile long returnDeadline = -1;
     private volatile int returnTotalSeconds = -1;
+    private volatile String whiteName = "White";
+    private volatile String blackName = "Black";
 
     public GameClient(URI serverUri) {
         super(serverUri);
@@ -86,6 +88,14 @@ public class GameClient extends WebSocketClient {
         return returnTotalSeconds < 0 ? null : returnTotalSeconds;
     }
 
+    public String getWhiteName() {
+        return whiteName;
+    }
+
+    public String getBlackName() {
+        return blackName;
+    }
+
     @Override
     public void onOpen(ServerHandshake handshakedata) {
         System.out.println("[CLIENT] connected to server");
@@ -116,6 +126,15 @@ public class GameClient extends WebSocketClient {
 
         if (message.startsWith("BOARD_STATE\n")) {
             boardStateReplies.add(message.substring("BOARD_STATE\n".length()));
+            return;
+        }
+
+        if (message.startsWith("PLAYERS ")) {
+            String[] names = message.substring("PLAYERS ".length()).split(" ");
+            if (names.length == 2) {
+                whiteName = names[0];
+                blackName = names[1];
+            }
             return;
         }
 
