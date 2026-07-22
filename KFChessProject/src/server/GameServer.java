@@ -1,79 +1,22 @@
 package server;
 
-import bus.GameBootstrapper;
-import engine.GameEngine;
-import io.BoardParser;
-import models.Board;
-import models.GameState;
-import models.Position;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
-import realtime.RealTimeArbiter;
 
 import java.net.InetSocketAddress;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 public class GameServer extends WebSocketServer {
 
-    private static final long TICK_MS = 16;
-
-    private static final String STARTING_BOARD =
-            "bR bN bB bK bQ bB bN bR\n" +
-                    "bP bP bP bP bP bP bP bP\n" +
-                    ".  .  .  .  .  .  .  .\n" +
-                    ".  .  .  .  .  .  .  .\n" +
-                    ".  .  .  .  .  .  .  .\n" +
-                    ".  .  .  .  .  .  .  .\n" +
-                    "wP wP wP wP wP wP wP wP\n" +
-                    "wR wN wB wK wQ wB wN wR";
-
-    private volatile GameEngine engine;
-    private volatile Board board;
-
-    private final PlayerRegistry playerRegistry = new PlayerRegistry();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+    private final RoomManager roomManager = new RoomManager(scheduler);
     private final MatchmakingService matchmaking;
-    private final ReconnectManager reconnectManager;
-    private final RematchService rematchService;
 
     public GameServer(int port) {
         super(new InetSocketAddress(port));
-        this.matchmaking = new MatchmakingService(playerRegistry, scheduler);
-        this.reconnectManager = new ReconnectManager(playerRegistry, scheduler, () -> engine.getBus());
-        this.rematchService = new RematchService(playerRegistry, scheduler, this::startNewMatch);
-
-        startNewMatch();
-        startGameLoop();
-    }
-
-    private void startNewMatch() {
-        this.board = BoardParser.parse(STARTING_BOARD);
-        RealTimeArbiter arbiter = new RealTimeArbiter();
-        GameState gameState = new GameState();
-        this.engine = GameBootstrapper.buildEngine(board, arbiter, gameState);
-
-        engine.getBus().subscribe("piece.captured", new NetworkBroadcastSubscriber(this));
-        engine.getBus().subscribe("move.completed", new NetworkBroadcastSubscriber(this));
-        engine.getBus().subscribe("game.over", new NetworkBroadcastSubscriber(this));
-        engine.getBus().subscribe("game.over", new RatingUpdateSubscriber(this));
-        engine.getBus().subscribe("piece.jumped", new NetworkBroadcastSubscriber(this));
-        engine.getBus().subscribe("game.over", rematchService);
-
-        System.out.println("[SERVER] new match board ready");
-    }
-
-    private void startGameLoop() {
-        Timer gameLoop = new Timer();
-        gameLoop.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                engine.waitMs(TICK_MS);
-            }
-        }, 0, TICK_MS);
+        this.matchmaking = new MatchmakingService(roomManager, scheduler);
     }
 
     @Override
@@ -82,14 +25,8 @@ public class GameServer extends WebSocketServer {
     }
 
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-        PlayerRole role = playerRegistry.getRole(conn);
         matchmaking.removeFromQueue(conn);
-
-        if (role == PlayerRole.WHITE || role == PlayerRole.BLACK) {
-            reconnectManager.onPlayerDisconnected(conn, role);
-        } else {
-            playerRegistry.removeRole(conn);
-        }
+        roomManager.handleDisconnect(conn);
 
         System.out.println("[SERVER] client disconnected: " + conn.getRemoteSocketAddress()
                 + " | code=" + code + " reason=" + reason + " remote=" + remote);
@@ -109,23 +46,32 @@ public class GameServer extends WebSocketServer {
             return;
         }
 
-        PlayerRole role = playerRegistry.getRole(conn);
-        if (role == null || role == PlayerRole.SPECTATOR) {
-            System.out.println("[SERVER] ignored move - no active role (not matched yet or spectator)");
+        if (message.equals("CREATE_ROOM")) {
+            matchmaking.removeFromQueue(conn);
+            roomManager.createRoom(conn);
             return;
         }
 
-        if (reconnectManager.isPausedForDisconnect()) {
-            System.out.println("[SERVER] move rejected - game paused, opponent disconnected");
+        if (message.startsWith("JOIN_ROOM ")) {
+            matchmaking.removeFromQueue(conn);
+            roomManager.joinRoomById(conn, message.substring("JOIN_ROOM ".length()).trim());
             return;
         }
 
-        if (message.length() == 4 && message.charAt(1) == 'J') {          // <-- חדש: זיהוי-קפיצה
-            handleJump(message, role);
+        if (message.equals("CANCEL")) {
+            matchmaking.removeFromQueue(conn);
+            roomManager.leaveCurrentRoom(conn);
+            conn.send("ROOM_CANCELLED");
             return;
         }
 
-        handleMove(message, role);
+        GameSession session = roomManager.getRoomForConnection(conn);
+        if (session == null) {
+            System.out.println("[SERVER] message from connection with no room yet - ignoring: " + message);
+            return;
+        }
+
+        session.handleGameMessage(conn, message);
     }
 
     private void handleLogin(WebSocket conn, String message) {
@@ -149,53 +95,17 @@ public class GameServer extends WebSocketServer {
             return;
         }
 
-        playerRegistry.setName(conn, username);
+        roomManager.registerLogin(conn, username);
+        DatabaseManager.logEvent(null, "LOGIN", username);
         int rating = DatabaseManager.getRating(username);
 
-        PlayerRole restoredRole = reconnectManager.tryReconnect(username, conn);
+        PlayerRole restoredRole = roomManager.tryReconnectAnywhere(username, conn);
         if (restoredRole != null) {
             System.out.println("[SERVER] " + username + " logged in (rating " + rating + ") - reconnected as " + restoredRole);
             conn.send("LOGIN_OK " + rating + " RECONNECTED " + restoredRole);
         } else {
             System.out.println("[SERVER] " + username + " logged in (rating " + rating + ")");
             conn.send("LOGIN_OK " + rating);
-        }
-    }
-
-    private void handleJump(String message, PlayerRole role) {
-        try {
-            Position pos = CommandParser.parseJump(message, board);
-            char colorChar = message.charAt(0);
-            boolean isWhiteCommand = colorChar == 'W';
-            boolean roleMatches = (role == PlayerRole.WHITE && isWhiteCommand)
-                    || (role == PlayerRole.BLACK && !isWhiteCommand);
-            if (!roleMatches) {
-                System.out.println("[SERVER] rejected jump: " + message + " - wrong color for role " + role);
-                return;
-            }
-            engine.triggerJump(pos);
-        } catch (IllegalArgumentException e) {
-            System.out.println("[SERVER] bad jump command: " + message);
-        }
-    }
-
-    private void handleMove(String message, PlayerRole role) {
-        try {
-            Position[] positions = CommandParser.parseMove(message, board);
-
-            char colorChar = message.charAt(0);
-            boolean isWhiteCommand = colorChar == 'W';
-            boolean roleMatches = (role == PlayerRole.WHITE && isWhiteCommand)
-                    || (role == PlayerRole.BLACK && !isWhiteCommand);
-
-            if (!roleMatches) {
-                System.out.println("[SERVER] rejected: " + message + " - wrong color for role " + role);
-                return;
-            }
-
-            engine.tryMove(positions[0], positions[1]);
-        } catch (IllegalArgumentException e) {
-            System.out.println("[SERVER] bad command: " + message);
         }
     }
 
@@ -207,9 +117,5 @@ public class GameServer extends WebSocketServer {
     @Override
     public void onStart() {
         System.out.println("[SERVER] started successfully");
-    }
-
-    public String getUsernameByRole(PlayerRole targetRole) {
-        return playerRegistry.getUsernameByRole(targetRole);
     }
 }

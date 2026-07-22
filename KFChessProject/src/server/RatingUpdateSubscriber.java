@@ -6,10 +6,10 @@ import models.enums.PieceColor;
 
 public class RatingUpdateSubscriber implements EventListener {
 
-    private final GameServer server;
+    private final GameSession session;
 
-    public RatingUpdateSubscriber(GameServer server) {
-        this.server = server;
+    public RatingUpdateSubscriber(GameSession session) {
+        this.session = session;
     }
 
     @Override
@@ -19,8 +19,8 @@ public class RatingUpdateSubscriber implements EventListener {
         PlayerRole winnerRole = event.getWinner() == PieceColor.WHITE ? PlayerRole.WHITE : PlayerRole.BLACK;
         PlayerRole loserRole = winnerRole == PlayerRole.WHITE ? PlayerRole.BLACK : PlayerRole.WHITE;
 
-        String winnerName = server.getUsernameByRole(winnerRole);
-        String loserName = server.getUsernameByRole(loserRole);
+        String winnerName = session.getUsernameByRole(winnerRole);
+        String loserName = session.getUsernameByRole(loserRole);
 
         if (winnerName == null || loserName == null) {
             System.out.println("[RATING] could not resolve player names, skipping update");

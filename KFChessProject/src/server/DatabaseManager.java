@@ -20,12 +20,37 @@ public class DatabaseManager {
                 );
                 """;
 
+        String createActivityLogTable = """
+                CREATE TABLE IF NOT EXISTS activity_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    room_id TEXT,
+                    event_type TEXT NOT NULL,
+                    detail TEXT,
+                    timestamp_ms INTEGER NOT NULL
+                );
+                """;
+
         try (Connection conn = connect();
              Statement stmt = conn.createStatement()) {
             stmt.execute(createUsersTable);
+            stmt.execute(createActivityLogTable);
             System.out.println("[DB] schema ready");
         } catch (SQLException e) {
             System.out.println("[DB] error: " + e.getMessage());
+        }
+    }
+
+    public static void logEvent(String roomId, String eventType, String detail) {
+        String sql = "INSERT INTO activity_log (room_id, event_type, detail, timestamp_ms) VALUES (?, ?, ?, ?)";
+        try (Connection conn = connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, roomId);
+            stmt.setString(2, eventType);
+            stmt.setString(3, detail);
+            stmt.setLong(4, System.currentTimeMillis());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("[DB] logEvent failed: " + e.getMessage());
         }
     }
 

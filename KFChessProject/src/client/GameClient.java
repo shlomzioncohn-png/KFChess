@@ -18,6 +18,7 @@ public class GameClient extends WebSocketClient {
     private volatile GameState gameState;
     private final BlockingQueue<String> loginReplies = new LinkedBlockingQueue<>();
     private final BlockingQueue<String> matchReplies = new LinkedBlockingQueue<>();
+    private final BlockingQueue<String> roomReplies = new LinkedBlockingQueue<>();
     private final BlockingQueue<Boolean> returnToQueueSignal = new LinkedBlockingQueue<>();
     private volatile long disconnectDeadline = -1;
     private volatile int disconnectTotalSeconds = -1;
@@ -39,6 +40,10 @@ public class GameClient extends WebSocketClient {
 
     public String awaitMatchReply() throws InterruptedException {
         return matchReplies.take();
+    }
+
+    public String awaitRoomReply() throws InterruptedException {
+        return roomReplies.take();
     }
 
     public void awaitReturnToQueue() throws InterruptedException {
@@ -85,12 +90,21 @@ public class GameClient extends WebSocketClient {
         System.out.println("[CLIENT] received: " + message);
 
         if (message.startsWith("LOGIN_OK") || message.startsWith("LOGIN_FAILED")) {
+            ClientLogger.log("LOGIN: " + message);
             loginReplies.add(message);
             return;
         }
 
         if (message.startsWith("ROLE ") || message.equals("NO_MATCH")) {
+            ClientLogger.log("MATCH: " + message);
             matchReplies.add(message);
+            return;
+        }
+
+        if (message.startsWith("ROOM_CREATED ") || message.startsWith("ROOM_JOINED ")
+                || message.startsWith("JOIN_FAILED") || message.equals("ROOM_CANCELLED")) {
+            ClientLogger.log("ROOM: " + message);
+            roomReplies.add(message);
             return;
         }
 
@@ -136,6 +150,7 @@ public class GameClient extends WebSocketClient {
                     currentGameState.setGameOver(true);
                     currentGameState.setWinner(winner);
                     currentEngine.getBus().publish("game.over", new GameOverEvent(winner));
+                    ClientLogger.log("GAME_OVER: winner=" + winner);
                 }
             } catch (IllegalArgumentException e) {
                 System.out.println("[CLIENT] bad GAMEOVER message: " + message);
@@ -166,6 +181,7 @@ public class GameClient extends WebSocketClient {
         try {
             Position[] positions = ServerMessageParser.parseMove(message);
             currentEngine.forceMove(positions[0], positions[1]);
+            ClientLogger.log("MOVE: " + message);
         } catch (IllegalArgumentException e) {
             System.out.println("[CLIENT] not a move message: " + message);
         }

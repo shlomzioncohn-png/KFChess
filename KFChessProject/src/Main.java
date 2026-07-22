@@ -9,10 +9,14 @@ import realtime.RealTimeArbiter;
 import input.Controller;
 import input.GameClickHandler;
 import view.FrameRenderer;
+import view.HomeDialog;
 import view.Renderer;
 import view.RenderSnapshot;
+import view.RoomDialog;
 import view.SearchingDialog;
 import view.SnapshotFactory;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -79,7 +83,7 @@ public class Main {
                 System.out.println("Reconnected (rating " + rating + ") - resuming your game as " + role);
                 startRound(wsClient, renderer);
             } else {
-                playRound(wsClient, renderer);
+                chooseGameMode(wsClient, renderer);
             }
 
         } catch (IllegalArgumentException e) {
@@ -142,6 +146,73 @@ public class Main {
                 System.out.println(BoardPrinter.print(printSnapshot));
             }
         }
+    }
+
+    // מסך בית: Quick Play (matchmaking רגיל) או Room (create/join). CANCEL ב-RoomDialog חוזר לכאן.
+    private static void chooseGameMode(GameClient wsClient, Renderer renderer) throws InterruptedException {
+        while (true) {
+            HomeDialog.Choice choice = new HomeDialog().open();
+
+            if (choice == HomeDialog.Choice.QUICK_PLAY) {
+                playRound(wsClient, renderer);
+                return;
+            }
+
+            if (handleRoomChoice(wsClient, renderer)) {
+                return;
+            }
+            // CANCEL, JOIN_FAILED, או קוד ריק - חוזרים למסך הבית ומנסים שוב
+        }
+    }
+
+    // מחזירה true אם המשחק התחיל בפועל (create/join הצליחו), false אם צריך לחזור למסך הבית
+    private static boolean handleRoomChoice(GameClient wsClient, Renderer renderer) throws InterruptedException {
+        RoomDialog.Result roomChoice = new RoomDialog().open();
+
+        if (roomChoice.action() == RoomDialog.Action.CANCEL) {
+            wsClient.send("CANCEL");
+            return false;
+        }
+
+        if (roomChoice.action() == RoomDialog.Action.CREATE) {
+            wsClient.send("CREATE_ROOM");
+        } else {
+            String roomId = roomChoice.roomId();
+            if (roomId == null || roomId.isEmpty()) {
+                return false;
+            }
+            wsClient.send("JOIN_ROOM " + roomId);
+        }
+
+        String roomReply = wsClient.awaitRoomReply();
+
+        if (roomReply.startsWith("JOIN_FAILED")) {
+            SwingUtilities.invokeLater(() ->
+                    JOptionPane.showMessageDialog(null,
+                            "Room not found. Please check the code and try again.",
+                            "Join Failed", JOptionPane.WARNING_MESSAGE)
+            );
+            return false;
+        }
+
+        if (roomReply.startsWith("ROOM_CREATED ")) {
+            String roomId = roomReply.substring("ROOM_CREATED ".length());
+            try {
+                SwingUtilities.invokeAndWait(() ->
+                        JOptionPane.showMessageDialog(null,
+                                "Room created! Share this code with your opponent:\n\n" + roomId,
+                                "Room Created", JOptionPane.INFORMATION_MESSAGE)
+                );
+            } catch (Exception ignored) {}
+        } else {
+            System.out.println("Joined room: " + roomReply.substring("ROOM_JOINED ".length()));
+        }
+
+        String matchReply = wsClient.awaitMatchReply();
+        System.out.println("You are " + matchReply.substring("ROLE ".length()));
+
+        startRound(wsClient, renderer);
+        return true;
     }
 
     // שולח PLAY, מציג SearchingDialog, ומנסה שוב אוטומטית (בלי פופ-אפ) על NO_MATCH
