@@ -49,6 +49,8 @@ public class BoardPrinter {
             }
         }
 
+        sb.append("\n").append(snapshot.getGameState().toString());
+
         return sb.toString();
     }
 }

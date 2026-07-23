@@ -1,3 +1,5 @@
+package  tests;
+
 import models.Position;
 import org.junit.jupiter.api.Test;
 

@@ -1,3 +1,5 @@
+package  tests;
+
 import models.Piece;
 import models.Position;
 import models.enums.PieceColor;

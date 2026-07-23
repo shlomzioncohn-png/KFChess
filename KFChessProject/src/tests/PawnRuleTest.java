@@ -1,3 +1,5 @@
+package  tests;
+
 import models.Board;
 import models.MatrixBoard;
 import models.Piece;
@@ -36,21 +38,22 @@ public class PawnRuleTest {
     @Test
     void whitePawnCanMoveTwoStepsFromStartRowWhenPathClear() {
         Board board = new MatrixBoard(8, 8);
-        Position pawnPos = new Position(7, 3); // שורת ההתחלה של הלבן היא height - 1
+        // שורת ההתחלה של הלבן היא height - 2 (row 6 בלוח 8x8: השורה שמעל שורת הכלים הכבדים בשורה 7)
+        Position pawnPos = new Position(6, 3);
         board.addPiece(pawnPos, new Piece("wp", PieceColor.WHITE, PieceType.PAWN, pawnPos));
 
-        assertTrue(RuleEngine.validateMove(board, pawnPos, new Position(5, 3)),
+        assertTrue(RuleEngine.validateMove(board, pawnPos, new Position(4, 3)),
                 "רגלי לבן בשורת ההתחלה חייב להיות מסוגל לזוז 2 צעדים קדימה כשהדרך פנויה");
     }
 
     @Test
     void whitePawnTwoStepMoveBlockedByPieceInPath() {
         Board board = new MatrixBoard(8, 8);
-        Position pawnPos = new Position(7, 3);
+        Position pawnPos = new Position(6, 3);
         board.addPiece(pawnPos, new Piece("wp", PieceColor.WHITE, PieceType.PAWN, pawnPos));
-        board.addPiece(new Position(6, 3), new Piece("blocker", PieceColor.WHITE, PieceType.PAWN, new Position(6, 3)));
+        board.addPiece(new Position(5, 3), new Piece("blocker", PieceColor.WHITE, PieceType.PAWN, new Position(5, 3)));
 
-        assertFalse(RuleEngine.validateMove(board, pawnPos, new Position(5, 3)),
+        assertFalse(RuleEngine.validateMove(board, pawnPos, new Position(4, 3)),
                 "מהלך של 2 צעדים חייב להיכשל אם יש כלי חוסם בדרך");
     }
 
@@ -106,11 +109,56 @@ public class PawnRuleTest {
     @Test
     void blackPawnMovesDownward() {
         Board board = new MatrixBoard(8, 8);
-        Position pawnPos = new Position(0, 3); // שורת ההתחלה של השחור היא 0
+        Position pawnPos = new Position(1, 3); // שורת ההתחלה של השחור היא 1 (מיד מתחת לשורת הכלים הכבדים בשורה 0)
         board.addPiece(pawnPos, new Piece("bp", PieceColor.BLACK, PieceType.PAWN, pawnPos));
 
-        assertTrue(RuleEngine.validateMove(board, pawnPos, new Position(1, 3)), "רגלי שחור חייב לזוז כלפי מטה");
-        assertTrue(RuleEngine.validateMove(board, pawnPos, new Position(2, 3)),
+        assertTrue(RuleEngine.validateMove(board, pawnPos, new Position(2, 3)), "רגלי שחור חייב לזוז כלפי מטה");
+        assertTrue(RuleEngine.validateMove(board, pawnPos, new Position(3, 3)),
                 "רגלי שחור בשורת ההתחלה חייב להיות מסוגל לזוז 2 צעדים כשהדרך פנויה");
+    }
+
+    @Test
+    void whitePawnCannotCaptureOwnColorDiagonally() {
+        Board board = new MatrixBoard(8, 8);
+        Position pawnPos = new Position(3, 3);
+        board.addPiece(pawnPos, new Piece("wp", PieceColor.WHITE, PieceType.PAWN, pawnPos));
+        Position friendPos = new Position(2, 4);
+        board.addPiece(friendPos, new Piece("friend", PieceColor.WHITE, PieceType.PAWN, friendPos));
+
+        assertFalse(RuleEngine.validateMove(board, pawnPos, friendPos), "רגלי אינו יכול לתפוס כלי מאותו הצבע באלכסון");
+    }
+
+    @Test
+    void blackPawnCanCaptureDiagonally() {
+        Board board = new MatrixBoard(8, 8);
+        Position pawnPos = new Position(3, 3);
+        board.addPiece(pawnPos, new Piece("bp", PieceColor.BLACK, PieceType.PAWN, pawnPos));
+        Position enemyPos = new Position(4, 4);
+        board.addPiece(enemyPos, new Piece("enemy", PieceColor.WHITE, PieceType.PAWN, enemyPos));
+
+        assertTrue(RuleEngine.validateMove(board, pawnPos, enemyPos), "רגלי שחור חייב להיות מסוגל לתפוס כלי יריב באלכסון");
+    }
+
+    @Test
+    void blackPawnCannotCaptureOwnColor() {
+        Board board = new MatrixBoard(8, 8);
+        Position pawnPos = new Position(3, 3);
+        board.addPiece(pawnPos, new Piece("bp", PieceColor.BLACK, PieceType.PAWN, pawnPos));
+        Position friendPos = new Position(4, 4);
+        board.addPiece(friendPos, new Piece("friend", PieceColor.BLACK, PieceType.PAWN, friendPos));
+
+        assertFalse(RuleEngine.validateMove(board, pawnPos, friendPos), "רגלי שחור אינו יכול לתפוס כלי מאותו הצבע");
+    }
+
+    @Test
+    void blackPawnBlockedByPieceDirectlyAhead() {
+        Board board = new MatrixBoard(8, 8);
+        Position pawnPos = new Position(3, 3);
+        board.addPiece(pawnPos, new Piece("bp", PieceColor.BLACK, PieceType.PAWN, pawnPos));
+        Position blocked = new Position(4, 3);
+        board.addPiece(blocked, new Piece("blocker", PieceColor.WHITE, PieceType.PAWN, blocked));
+
+        assertFalse(RuleEngine.validateMove(board, pawnPos, blocked),
+                "רגלי שחור אינו יכול להתקדם ישר קדימה אל תוך משבצת תפוסה");
     }
 }

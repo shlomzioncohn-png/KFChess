@@ -1,3 +1,5 @@
+package  tests;
+
 import models.Board;
 import models.MatrixBoard;
 import models.Piece;
@@ -44,5 +46,27 @@ public class KingRuleTest {
         Board board = boardWithKing(kingPos);
 
         assertFalse(RuleEngine.validateMove(board, kingPos, new Position(6, 5)), "מלך אינו יכול לזוז בצורת L כמו פרש");
+    }
+
+    @Test
+    void kingCannotCaptureOwnColor() {
+        Position kingPos = new Position(4, 4);
+        Board board = boardWithKing(kingPos);
+        Position friendPos = new Position(4, 3);
+        board.addPiece(friendPos, new Piece("friend", PieceColor.WHITE, PieceType.PAWN, friendPos));
+
+        assertFalse(RuleEngine.validateMove(board, kingPos, friendPos), "מלך אינו יכול לתפוס כלי מאותו הצבע");
+    }
+
+    @Test
+    void kingAtCornerHasOnlyTheThreeAdjacentMovesThatStayOnBoard() {
+        Position kingPos = new Position(0, 0);
+        Board board = boardWithKing(kingPos);
+
+        assertTrue(RuleEngine.validateMove(board, kingPos, new Position(0, 1)));
+        assertTrue(RuleEngine.validateMove(board, kingPos, new Position(1, 0)));
+        assertTrue(RuleEngine.validateMove(board, kingPos, new Position(1, 1)));
+        assertFalse(RuleEngine.validateMove(board, kingPos, new Position(-1, 0)),
+                "צעד שהיה חוקי בגודלו אך יוצא מגבולות הלוח חייב להיפסל");
     }
 }

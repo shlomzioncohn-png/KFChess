@@ -61,6 +61,7 @@ public class GameEngine {
     }
 
     public void triggerJump(Position pos) {
+        if (gameState.isGameOver()) return;
         Piece piece = board.getPieceAt(pos);
         if (piece == null) return;
         if (piece.getState() == PieceState.AIRBORNE) return;

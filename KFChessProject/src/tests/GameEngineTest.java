@@ -10,7 +10,11 @@ import models.enums.PieceColor;
 import models.enums.PieceState;
 import models.enums.PieceType;
 import org.junit.jupiter.api.Test;
+import realtime.Motion;
 import realtime.RealTimeArbiter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -114,7 +118,7 @@ public class GameEngineTest {
     }
 
     @Test
-    void updateAfterArrivalTimeMovesPieceAndSetsIdle() {
+    void updateAfterArrivalTimeMovesPieceAndEntersLongRestThenReturnsToIdle() {
         Board board = new MatrixBoard(8, 8);
         GameState state = new GameState();
         Position src = new Position(4, 4);
@@ -128,7 +132,11 @@ public class GameEngineTest {
 
         assertNull(board.getPieceAt(src), "אחרי שהגיע זמן היעד, המשבצת המקורית חייבת להתרוקן");
         assertEquals(rook, board.getPieceAt(dest), "אחרי שהגיע זמן היעד, הכלי חייב להופיע במשבצת היעד");
-        assertEquals(PieceState.IDLE, rook.getState(), "אחרי סיום התנועה, מצב הכלי חייב לחזור ל-IDLE");
+        // מיד עם ההגעה הכלי נכנס למנוחה ארוכה (LONG_RESTING) - לא חוזר ישר ל-IDLE
+        assertEquals(PieceState.LONG_RESTING, rook.getState(), "מיד לאחר סיום מהלך הכלי חייב להיכנס למנוחה ארוכה");
+
+        engine.waitMs(GameEngine.LONG_REST_DURATION);
+        assertEquals(PieceState.IDLE, rook.getState(), "אחרי שתם משך המנוחה הארוכה, הכלי חייב לחזור ל-IDLE");
     }
 
     @Test
@@ -253,5 +261,126 @@ public class GameEngineTest {
         engine.waitMs(1000L);
 
         assertEquals(PieceType.QUEEN, pawn.getType(), "רגלי שמגיע לשורה האחרונה חייב להיות מוכתר למלכה");
+    }
+
+    @Test
+    void forceMoveSkipsRuleValidationAndAllowsAnIllegalMove() {
+        Board board = new MatrixBoard(8, 8);
+        GameState state = new GameState();
+        Position src = new Position(4, 4);
+        Position dest = new Position(6, 6); // אלכסון - לא חוקי לצריח לפי RuleEngine
+        Piece rook = new Piece("r", PieceColor.WHITE, PieceType.ROOK, src);
+        board.addPiece(src, rook);
+        GameEngine engine = newEngine(board, state);
+
+        engine.forceMove(src, dest);
+
+        assertEquals(PieceState.AIRBORNE, rook.getState(), "forceMove חייב להעביר את הכלי ל-AIRBORNE גם למהלך שאינו חוקי לפי חוקי המשחק");
+        List<Motion> motions = engine.getActiveMotions();
+        assertEquals(1, motions.size());
+        assertEquals(dest, motions.get(0).getDestination(), "forceMove חייב ליצור תנועה בדיוק ליעד שסופק, בלי ולידציה חוזרת");
+    }
+
+    @Test
+    void forceMoveOnEmptySourceDoesNothingSilently() {
+        Board board = new MatrixBoard(8, 8);
+        GameState state = new GameState();
+        GameEngine engine = newEngine(board, state);
+
+        assertDoesNotThrow(() -> engine.forceMove(new Position(0, 0), new Position(1, 1)),
+                "forceMove ממשבצת ריקה (דה-סינק) אסור לזרוק חריגה");
+        assertTrue(engine.getActiveMotions().isEmpty());
+    }
+
+    @Test
+    void forceMoveReplacesAnyExistingActiveMotionForTheSamePiece() {
+        Board board = new MatrixBoard(8, 8);
+        GameState state = new GameState();
+        Position src = new Position(4, 4);
+        Position oldDest = new Position(4, 5);   // tryMove: מרחק 1 -> הגעה ב-1000
+        Position newDest = new Position(4, 7);   // forceMove: מרחק 3 -> הגעה ב-3000
+        Piece rook = new Piece("r", PieceColor.WHITE, PieceType.ROOK, src);
+        board.addPiece(src, rook);
+        GameEngine engine = newEngine(board, state);
+
+        engine.tryMove(src, oldDest);
+        engine.forceMove(src, newDest);
+
+        assertEquals(1, engine.getActiveMotions().size(), "forceMove חייב להחליף את התנועה הישנה, לא להוסיף תנועה שנייה");
+
+        engine.waitMs(1000L); // הזמן שבו התנועה הישנה (ל-oldDest) הייתה אמורה להסתיים
+        assertNull(board.getPieceAt(oldDest), "התנועה הישנה בוטלה - היעד הישן חייב להישאר ריק");
+        assertEquals(rook, board.getPieceAt(src), "הכלי חייב עדיין להיות בטיסה (טרם הגיע ליעד החדש)");
+
+        engine.waitMs(2000L); // עוד 2000, סה"כ 3000 - זמן ההגעה של forceMove
+        assertEquals(rook, board.getPieceAt(newDest), "הכלי חייב להגיע ליעד החדש שנקבע ב-forceMove");
+    }
+
+    @Test
+    void forceJumpSkipsValidationAndWorksEvenWhilePieceIsResting() {
+        Board board = new MatrixBoard(8, 8);
+        GameState state = new GameState();
+        Position pos = new Position(2, 2);
+        Piece pawn = new Piece("p", PieceColor.WHITE, PieceType.PAWN, pos);
+        pawn.setState(PieceState.LONG_RESTING);
+        pawn.setRestExpiryTime(10_000L); // עדיין במנוחה זמן רב
+        board.addPiece(pos, pawn);
+        GameEngine engine = newEngine(board, state);
+
+        engine.forceJump(pos);
+
+        assertEquals(PieceState.JUMPING, pawn.getState(),
+                "forceJump חייב לעבוד גם על כלי במנוחה - שלא כמו triggerJump הרגיל שהיה מסרב");
+    }
+
+    @Test
+    void forceJumpOnEmptySourceDoesNothingSilently() {
+        Board board = new MatrixBoard(8, 8);
+        GameState state = new GameState();
+        GameEngine engine = newEngine(board, state);
+
+        assertDoesNotThrow(() -> engine.forceJump(new Position(3, 3)),
+                "forceJump על משבצת ריקה (דה-סינק) אסור לזרוק חריגה");
+    }
+
+    @Test
+    void triggerJumpRefusesWhilePieceIsRestingUnlikeForceJump() {
+        Board board = new MatrixBoard(8, 8);
+        GameState state = new GameState();
+        Position pos = new Position(2, 2);
+        Piece pawn = new Piece("p", PieceColor.WHITE, PieceType.PAWN, pos);
+        pawn.setState(PieceState.LONG_RESTING);
+        pawn.setRestExpiryTime(10_000L);
+        board.addPiece(pos, pawn);
+        GameEngine engine = newEngine(board, state);
+
+        engine.triggerJump(pos);
+
+        assertEquals(PieceState.LONG_RESTING, pawn.getState(),
+                "triggerJump (בניגוד ל-forceJump) חייב לסרב לכלי שנמצא במנוחה");
+    }
+
+    @Test
+    void decisiveCapturePublishesCaptureThenMoveThenGameOverInOrder() {
+        Board board = new MatrixBoard(8, 8);
+        GameState state = new GameState();
+        Position src = new Position(4, 4);
+        Position dest = new Position(4, 5);
+        Piece rook = new Piece("attacker", PieceColor.WHITE, PieceType.ROOK, src);
+        Piece enemyKing = new Piece("king", PieceColor.BLACK, PieceType.KING, dest);
+        board.addPiece(src, rook);
+        board.addPiece(dest, enemyKing);
+        GameEngine engine = newEngine(board, state);
+
+        List<String> publishedTopics = new ArrayList<>();
+        engine.getBus().subscribe("piece.captured", (topic, payload) -> publishedTopics.add(topic));
+        engine.getBus().subscribe("move.completed", (topic, payload) -> publishedTopics.add(topic));
+        engine.getBus().subscribe("game.over", (topic, payload) -> publishedTopics.add(topic));
+
+        engine.tryMove(src, dest);
+        engine.waitMs(1000L);
+
+        assertEquals(List.of("piece.captured", "move.completed", "game.over"), publishedTopics,
+                "בתפיסה מכרעת, סדר האירועים חייב להיות: תפיסה, ואז מהלך הושלם, ואז סוף משחק - ולא הפוך");
     }
 }

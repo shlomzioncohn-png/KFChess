@@ -1,3 +1,5 @@
+package  tests;
+
 import models.Board;
 import models.MatrixBoard;
 import models.Piece;
@@ -62,5 +64,23 @@ public class RookRuleTest {
         board.addPiece(friendPos, new Piece("friend", PieceColor.WHITE, PieceType.PAWN, friendPos));
 
         assertFalse(RuleEngine.validateMove(board, rookPos, friendPos), "צריח אינו יכול לתפוס כלי מאותו הצבע");
+    }
+
+    @Test
+    void rookAtCornerCanReachOppositeEdgesOfBoard() {
+        Position rookPos = new Position(0, 0);
+        Board board = boardWithRook(rookPos);
+
+        assertTrue(RuleEngine.validateMove(board, rookPos, new Position(0, 7)), "צריח בפינה חייב להגיע לקצה השורה הפנוי");
+        assertTrue(RuleEngine.validateMove(board, rookPos, new Position(7, 0)), "צריח בפינה חייב להגיע לקצה העמודה הפנוי");
+    }
+
+    @Test
+    void rookCannotMoveToPositionOutsideBoardBounds() {
+        Position rookPos = new Position(4, 4);
+        Board board = boardWithRook(rookPos);
+
+        assertFalse(RuleEngine.validateMove(board, rookPos, new Position(4, 8)),
+                "יעד מחוץ לגבולות הלוח חייב להיפסל גם כשהכיוון עצמו תקין לצריח");
     }
 }

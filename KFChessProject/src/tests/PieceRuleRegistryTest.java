@@ -1,3 +1,5 @@
+package  tests;
+
 import models.enums.PieceType;
 import org.junit.jupiter.api.Test;
 import rules.*;

@@ -1,3 +1,6 @@
+
+package  tests;
+
 import models.Piece;
 import models.Position;
 import models.enums.PieceColor;
@@ -13,6 +16,12 @@ public class WinConditionTest {
     void capturingKingIsDecisive() {
         Piece king = new Piece("k", PieceColor.BLACK, PieceType.KING, new Position(0, 0));
         assertTrue(WinCondition.isDecisive(king), "תפיסת מלך חייבת להיחשב מכרעת ולסיים את המשחק");
+    }
+
+    @Test
+    void capturingEitherColorKingIsDecisive() {
+        Piece whiteKing = new Piece("k2", PieceColor.WHITE, PieceType.KING, new Position(0, 0));
+        assertTrue(WinCondition.isDecisive(whiteKing), "תפיסת מלך לבן חייבת להיחשב מכרעת בדיוק כמו מלך שחור");
     }
 
     @Test

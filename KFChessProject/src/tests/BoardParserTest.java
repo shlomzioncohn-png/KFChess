@@ -1,3 +1,5 @@
+package  tests;
+
 import io.BoardParser;
 import models.Board;
 import models.Position;

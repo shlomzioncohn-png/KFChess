@@ -1,3 +1,5 @@
+package  tests;
+
 import engine.MoveResult;
 import models.Board;
 import models.MatrixBoard;

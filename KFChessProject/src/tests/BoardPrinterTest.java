@@ -1,3 +1,5 @@
+package  tests;
+
 import io.BoardParser;
 import io.BoardPrinter;
 import models.Board;

@@ -1,3 +1,5 @@
+package  tests;
+
 import models.Board;
 import models.MatrixBoard;
 import models.Piece;
@@ -47,5 +49,26 @@ public class KnightRuleTest {
 
         assertTrue(RuleEngine.validateMove(board, knightPos, new Position(6, 5)),
                 "פרש מדלג מעל כלים אחרים, לכן חסימות בדרך אינן אמורות להשפיע");
+    }
+
+    @Test
+    void knightCannotCaptureOwnColor() {
+        Position knightPos = new Position(4, 4);
+        Board board = boardWithKnight(knightPos);
+        Position friendPos = new Position(6, 5);
+        board.addPiece(friendPos, new Piece("friend", PieceColor.WHITE, PieceType.PAWN, friendPos));
+
+        assertFalse(RuleEngine.validateMove(board, knightPos, friendPos), "פרש אינו יכול לתפוס כלי מאותו הצבע");
+    }
+
+    @Test
+    void knightAtCornerHasOnlyTheTwoLShapedMovesThatStayOnBoard() {
+        Position knightPos = new Position(0, 0);
+        Board board = boardWithKnight(knightPos);
+
+        assertTrue(RuleEngine.validateMove(board, knightPos, new Position(1, 2)), "פרש בפינה (0,0) - מהלך L חוקי אחד");
+        assertTrue(RuleEngine.validateMove(board, knightPos, new Position(2, 1)), "פרש בפינה (0,0) - מהלך L חוקי שני");
+        assertFalse(RuleEngine.validateMove(board, knightPos, new Position(-1, 2)),
+                "מהלך שהיה חוקי בצורתו אך יוצא מגבולות הלוח חייב להיפסל");
     }
 }

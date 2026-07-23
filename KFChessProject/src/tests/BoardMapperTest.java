@@ -4,7 +4,7 @@ import input.BoardMapper;
 import models.Board;
 import models.MatrixBoard;
 import models.Position;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 
@@ -23,7 +23,7 @@ public class BoardMapperTest {
 
     @Test
     void returnsNullWhenResultingPositionIsOutOfBounds() {
-        Board board = new MatrixBoard(2, 2); // לוח קטן, 2x2 בלבד
+        Board board = new MatrixBoard(2, 2);
         Position pos = BoardMapper.mapPixelToPosition(500, 500, board, 100);
 
         assertNull(pos, "פיקסל שממופה מחוץ לגבולות הלוח חייב להחזיר null");

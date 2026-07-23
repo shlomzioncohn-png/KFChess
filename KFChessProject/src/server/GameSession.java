@@ -168,7 +168,7 @@ public class GameSession {
     }
 
     public void startGameLoop() {
-        Timer gameLoop = new Timer();
+        Timer gameLoop = new Timer(true);
         gameLoop.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {

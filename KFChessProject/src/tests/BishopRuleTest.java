@@ -1,3 +1,5 @@
+package  tests;
+
 import models.Board;
 import models.MatrixBoard;
 import models.Piece;
@@ -53,5 +55,24 @@ public class BishopRuleTest {
         board.addPiece(enemyPos, new Piece("enemy", PieceColor.BLACK, PieceType.PAWN, enemyPos));
 
         assertTrue(RuleEngine.validateMove(board, bishopPos, enemyPos), "רץ חייב להיות מסוגל לתפוס כלי יריב בסוף האלכסון");
+    }
+
+    @Test
+    void bishopCannotCaptureOwnColor() {
+        Position bishopPos = new Position(4, 4);
+        Board board = boardWithBishop(bishopPos);
+        Position friendPos = new Position(6, 6);
+        board.addPiece(friendPos, new Piece("friend", PieceColor.WHITE, PieceType.PAWN, friendPos));
+
+        assertFalse(RuleEngine.validateMove(board, bishopPos, friendPos), "רץ אינו יכול לתפוס כלי מאותו הצבע");
+    }
+
+    @Test
+    void bishopAtCornerCanReachFarCornerAlongDiagonal() {
+        Position bishopPos = new Position(0, 0);
+        Board board = boardWithBishop(bishopPos);
+
+        assertTrue(RuleEngine.validateMove(board, bishopPos, new Position(7, 7)),
+                "רץ בפינת הלוח חייב להיות מסוגל לזוז עד לפינה הנגדית לאורך האלכסון הפנוי");
     }
 }

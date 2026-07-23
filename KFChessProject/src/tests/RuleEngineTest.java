@@ -1,3 +1,5 @@
+package  tests;
+
 import models.Board;
 import models.MatrixBoard;
 import models.Piece;
@@ -6,6 +8,8 @@ import models.enums.PieceColor;
 import models.enums.PieceType;
 import org.junit.jupiter.api.Test;
 import rules.RuleEngine;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -68,5 +72,44 @@ public class RuleEngineTest {
 
         assertTrue(RuleEngine.validateMove(board, src, new Position(0, 3)),
                 "מהלך חוקי לפי כללי הכלי הספציפי חייב לעבור");
+    }
+
+    @Test
+    void getLegalDestinationsForRookInOpenBoardReturnsAllStraightLineCells() {
+        Board board = new MatrixBoard(8, 8);
+        Position rookPos = new Position(4, 4);
+        board.addPiece(rookPos, new Piece("r", PieceColor.WHITE, PieceType.ROOK, rookPos));
+
+        List<Position> legal = new RuleEngine().getLegalDestinations(board, rookPos);
+
+        assertEquals(14, legal.size(), "צריח בודד באמצע לוח פתוח 8x8 חייב לקבל בדיוק 14 יעדים (7 בשורה + 7 בעמודה)");
+        assertTrue(legal.contains(new Position(4, 0)));
+        assertTrue(legal.contains(new Position(0, 4)));
+        assertFalse(legal.contains(rookPos), "המשבצת הנוכחית של הכלי אסורה להופיע כיעד חוקי");
+        assertFalse(legal.contains(new Position(5, 5)), "יעד אלכסוני אסור להופיע ביעדים החוקיים של צריח");
+    }
+
+    @Test
+    void getLegalDestinationsFromEmptyCellReturnsEmptyList() {
+        Board board = new MatrixBoard(8, 8);
+
+        List<Position> legal = new RuleEngine().getLegalDestinations(board, new Position(0, 0));
+
+        assertTrue(legal.isEmpty(), "אין כלי במשבצת המקור - רשימת היעדים החוקיים חייבת להיות ריקה, לא לזרוק שגיאה");
+    }
+
+    @Test
+    void getLegalDestinationsExcludesSquaresOccupiedByOwnColor() {
+        Board board = new MatrixBoard(8, 8);
+        Position rookPos = new Position(4, 4);
+        board.addPiece(rookPos, new Piece("r", PieceColor.WHITE, PieceType.ROOK, rookPos));
+        Position blockerPos = new Position(4, 6);
+        board.addPiece(blockerPos, new Piece("friend", PieceColor.WHITE, PieceType.PAWN, blockerPos));
+
+        List<Position> legal = new RuleEngine().getLegalDestinations(board, rookPos);
+
+        assertFalse(legal.contains(blockerPos), "משבצת עם כלי-בית אסורה להופיע ביעדים החוקיים");
+        assertFalse(legal.contains(new Position(4, 7)), "משבצת שמעבר לכלי-הבית חסומה ואסורה להופיע ביעדים החוקיים");
+        assertTrue(legal.contains(new Position(4, 5)), "המשבצת שלפני כלי-הבית עדיין חייבת להיות יעד חוקי");
     }
 }
